@@ -79,9 +79,19 @@ export default function Home() {
                   className="pl-10 border-0 shadow-none text-slate-900 placeholder:text-slate-400 h-12 text-lg focus-visible:ring-0"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  data-testid="input-home-search"
                 />
               </div>
-              <Button size="lg" className="h-12 px-8 text-lg font-semibold">
+              <Button 
+                size="lg" 
+                className="h-12 px-8 text-lg font-semibold"
+                onClick={() => {
+                  // Scroll to services section
+                  const servicesSection = document.querySelector('[data-testid="services-section"]');
+                  servicesSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                data-testid="button-home-search"
+              >
                 Search
               </Button>
             </motion.div>
@@ -126,7 +136,7 @@ export default function Home() {
       </section>
 
       {/* Services Grid */}
-      <section className="py-12 bg-slate-50">
+      <section className="py-12 bg-slate-50" data-testid="services-section">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold">Top Rated Services</h2>

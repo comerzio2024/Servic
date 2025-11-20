@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlusCircle, Settings, CreditCard, BarChart3, RefreshCw, Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,12 +10,14 @@ import { apiRequest, type ServiceWithDetails } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import type { Service } from "@shared/schema";
+import { CreateServiceModal } from "@/components/create-service-modal";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data: myServices = [], isLoading: servicesLoading } = useQuery<ServiceWithDetails[]>({
     queryKey: ["/api/services", { ownerId: user?.id }],
@@ -133,7 +135,12 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
               <p className="text-slate-500">Manage your services and account settings</p>
             </div>
-            <Button size="lg" className="gap-2 shadow-md shadow-primary/20">
+            <Button 
+              size="lg" 
+              className="gap-2 shadow-md shadow-primary/20"
+              onClick={() => setShowCreateModal(true)}
+              data-testid="button-post-new-service"
+            >
               <PlusCircle className="w-4 h-4" /> Post New Service
             </Button>
           </div>
@@ -333,6 +340,8 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </div>
+
+      <CreateServiceModal open={showCreateModal} onOpenChange={setShowCreateModal} />
     </Layout>
   );
 }
