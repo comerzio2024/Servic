@@ -11,16 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Plus, Upload } from "lucide-react";
 import type { Category } from "@shared/schema";
 import { uploadImage } from "@/lib/imageUpload";
-import { CategorySuggestionModal } from "@/components/category-suggestion-modal";
 
 interface CreateServiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuggestCategory: () => void;
 }
 
 type PricingType = "fixed" | "list" | "text";
 
-export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalProps) {
+export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: CreateServiceModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -40,7 +40,6 @@ export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalPro
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [showCategorySuggestion, setShowCategorySuggestion] = useState(false);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -273,7 +272,7 @@ export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalPro
                   Can't find the right category?{" "}
                   <button
                     type="button"
-                    onClick={() => setShowCategorySuggestion(true)}
+                    onClick={onSuggestCategory}
                     className="text-primary hover:underline font-medium"
                     data-testid="button-suggest-category-inline"
                   >
@@ -528,10 +527,6 @@ export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalPro
           </div>
         </form>
       </DialogContent>
-      <CategorySuggestionModal 
-        open={showCategorySuggestion} 
-        onOpenChange={setShowCategorySuggestion} 
-      />
     </Dialog>
   );
 }

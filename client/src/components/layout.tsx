@@ -6,12 +6,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from "@/hooks/useAuth";
 import { SearchAutocomplete } from "@/components/search-autocomplete";
 import { CreateServiceModal } from "@/components/create-service-modal";
+import { CategorySuggestionModal } from "@/components/category-suggestion-modal";
 import { useState } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [showCreateService, setShowCreateService] = useState(false);
+  const [showCategorySuggestion, setShowCategorySuggestion] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
@@ -164,7 +166,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
-      <CreateServiceModal open={showCreateService} onOpenChange={setShowCreateService} />
+      <CreateServiceModal 
+        open={showCreateService} 
+        onOpenChange={setShowCreateService}
+        onSuggestCategory={() => setShowCategorySuggestion(true)}
+      />
+      <CategorySuggestionModal 
+        open={showCategorySuggestion} 
+        onOpenChange={setShowCategorySuggestion}
+      />
     </div>
   );
 }
