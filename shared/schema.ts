@@ -222,6 +222,7 @@ export type InsertPlan = typeof plans.$inferInsert;
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type UserWithPlan = User & { plan?: Plan };
 
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = typeof categories.$inferInsert;

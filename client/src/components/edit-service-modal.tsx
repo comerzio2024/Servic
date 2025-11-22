@@ -27,8 +27,8 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
   const { user } = useAuth();
   const [formData, setFormData] = useState<any>(null);
 
-  // Calculate max images based on marketing package
-  const maxImages = user?.marketingPackage === "basic" ? 4 : 10;
+  // Calculate max images based on user's plan (default to basic plan limits if no plan)
+  const maxImages = user?.plan?.maxImages || 4;
 
   useEffect(() => {
     if (service) {

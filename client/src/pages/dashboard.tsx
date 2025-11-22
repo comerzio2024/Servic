@@ -166,7 +166,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Active Plan</p>
-                  <h3 className="text-2xl font-bold capitalize">{user.marketingPackage}</h3>
+                  <h3 className="text-2xl font-bold capitalize">{user.plan?.name || user.marketingPackage || "Free"}</h3>
                 </div>
               </div>
             </div>
@@ -350,7 +350,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <CreateServiceModal open={showCreateModal} onOpenChange={setShowCreateModal} />
+      <CreateServiceModal 
+        open={showCreateModal} 
+        onOpenChange={setShowCreateModal}
+        onSuggestCategory={() => {}}
+      />
       <EditServiceModal 
         open={!!editingService} 
         onOpenChange={(open) => !open && setEditingService(null)} 

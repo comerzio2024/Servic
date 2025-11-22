@@ -1,8 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertServiceSchema, insertReviewSchema, insertCategorySchema, insertSubmittedCategorySchema } from "@shared/schema";
+import { isAdmin, adminLogin, adminLogout, getAdminSession } from "./adminAuth";
+import { insertServiceSchema, insertReviewSchema, insertCategorySchema, insertSubmittedCategorySchema, insertPlanSchema } from "@shared/schema";
 import { categorizeService } from "./aiService";
 import { fromZodError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -113,6 +116,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error submitting category suggestion:", error);
       res.status(500).json({ message: "Failed to submit category suggestion" });
+    }
+  });
+
+  // Plan routes
+  app.get('/api/plans', async (_req, res) => {
+    try {
+      const plans = await storage.getPlans();
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+      res.status(500).json({ message: "Failed to fetch plans" });
+    }
+  });
+
+  app.get('/api/plans/:id', async (req, res) => {
+    try {
+      const plan = await storage.getPlan(req.params.id);
+      if (!plan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error("Error fetching plan:", error);
+      res.status(500).json({ message: "Failed to fetch plan" });
     }
   });
 
@@ -381,6 +408,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error expiring services:", error);
       res.status(500).json({ message: "Failed to expire services" });
+    }
+  });
+
+  // Admin authentication routes
+  app.post('/api/admin/login', adminLogin);
+  app.post('/api/admin/logout', adminLogout);
+  app.get('/api/admin/session', getAdminSession);
+
+  // Admin user management routes
+  app.get('/api/admin/users', isAdmin, async (_req, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id', isAdmin, async (req, res) => {
+    try {
+      const { isAdmin: adminFlag, planId } = req.body;
+      
+      if (adminFlag !== undefined) {
+        await storage.updateUserAdmin(req.params.id, adminFlag);
+      }
+      
+      if (planId !== undefined) {
+        await storage.updateUserPlan(req.params.id, planId);
+      }
+      
+      const user = await storage.getUser(req.params.id);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Admin service management routes
+  app.get('/api/admin/services', isAdmin, async (_req, res) => {
+    try {
+      const services = await storage.getServices();
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ message: "Failed to fetch services" });
+    }
+  });
+
+  app.delete('/api/admin/services/:id', isAdmin, async (req, res) => {
+    try {
+      await storage.deleteService(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      res.status(500).json({ message: "Failed to delete service" });
+    }
+  });
+
+  // Admin category management routes
+  app.get('/api/admin/category-suggestions', isAdmin, async (req, res) => {
+    try {
+      const { status } = req.query;
+      const suggestions = await storage.getCategorySuggestions(status as string | undefined);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error fetching category suggestions:", error);
+      res.status(500).json({ message: "Failed to fetch category suggestions" });
+    }
+  });
+
+  app.patch('/api/admin/category-suggestions/:id', isAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const suggestion = await storage.updateCategorySuggestionStatus(req.params.id, status);
+      
+      // If approved, create the category
+      if (status === 'approved' && suggestion) {
+        await storage.createCategory({
+          name: suggestion.name,
+          slug: suggestion.name.toLowerCase().replace(/\s+/g, '-'),
+        });
+      }
+      
+      res.json(suggestion);
+    } catch (error) {
+      console.error("Error updating category suggestion:", error);
+      res.status(500).json({ message: "Failed to update category suggestion" });
+    }
+  });
+
+  // Admin plan management routes
+  app.post('/api/admin/plans', isAdmin, async (req, res) => {
+    try {
+      const validated = insertPlanSchema.parse(req.body);
+      const plan = await storage.createPlan(validated);
+      res.status(201).json(plan);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      console.error("Error creating plan:", error);
+      res.status(500).json({ message: "Failed to create plan" });
+    }
+  });
+
+  app.patch('/api/admin/plans/:id', isAdmin, async (req, res) => {
+    try {
+      const plan = await storage.updatePlan(req.params.id, req.body);
+      res.json(plan);
+    } catch (error) {
+      console.error("Error updating plan:", error);
+      res.status(500).json({ message: "Failed to update plan" });
+    }
+  });
+
+  app.delete('/api/admin/plans/:id', isAdmin, async (req, res) => {
+    try {
+      await storage.deletePlan(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+      res.status(500).json({ message: "Failed to delete plan" });
     }
   });
 

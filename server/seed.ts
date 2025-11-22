@@ -12,6 +12,16 @@ const CATEGORIES = [
 
 const SAMPLE_USERS = [
   {
+    id: "admin-user",
+    email: "admin@servemkt.ch",
+    firstName: "Admin",
+    lastName: "User",
+    profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
+    isVerified: true,
+    isAdmin: true,
+    marketingPackage: "enterprise" as const,
+  },
+  {
     id: "demo-user-1",
     email: "maria.mueller@example.ch",
     firstName: "Maria",
