@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Plus, Upload } from "lucide-react";
 import type { Category } from "@shared/schema";
+import { uploadImage } from "@/lib/imageUpload";
 
 interface CreateServiceModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalPro
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -92,19 +94,37 @@ export function CreateServiceModal({ open, onOpenChange }: CreateServiceModalPro
     setDraftSaved(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setUploadingImage(true);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setFormData((prev) => ({
-          ...prev,
-          images: [...prev.images, dataUrl],
-        }));
-        setImagePreview(dataUrl);
+        setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+
+      try {
+        const objectPath = await uploadImage(file);
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, objectPath],
+        }));
+        toast({
+          title: "Image uploaded",
+          description: "Image uploaded successfully",
+        });
+      } catch (error) {
+        console.error("Failed to upload image:", error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload image. Please try again.",
+          variant: "destructive",
+        });
+        setImagePreview(null);
+      } finally {
+        setUploadingImage(false);
+      }
     }
   };
 

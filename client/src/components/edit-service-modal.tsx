@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Plus, Upload } from "lucide-react";
 import type { Service } from "@shared/schema";
+import { uploadImage } from "@/lib/imageUpload";
 
 interface EditServiceModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<any>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (service) {
@@ -67,17 +69,30 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
 
   if (!formData) return null;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      setUploadingImage(true);
+      try {
+        const objectPath = await uploadImage(file);
         setFormData((prev: any) => ({
           ...prev,
-          images: [...prev.images, reader.result],
+          images: [...prev.images, objectPath],
         }));
-      };
-      reader.readAsDataURL(file);
+        toast({
+          title: "Image uploaded",
+          description: "Image uploaded successfully",
+        });
+      } catch (error) {
+        console.error("Failed to upload image:", error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload image. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setUploadingImage(false);
+      }
     }
   };
 
