@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertServiceSchema, insertReviewSchema, insertCategorySchema } from "@shared/schema";
+import { insertServiceSchema, insertReviewSchema, insertCategorySchema, insertSubmittedCategorySchema } from "@shared/schema";
 import { categorizeService } from "./aiService";
 import { fromZodError } from "zod-validation-error";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -95,6 +95,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating category:", error);
       res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  app.post('/api/categories/suggest', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertSubmittedCategorySchema.parse({
+        ...req.body,
+        userId,
+      });
+      const submittedCategory = await storage.submitCategory(validated);
+      res.status(201).json(submittedCategory);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      console.error("Error submitting category suggestion:", error);
+      res.status(500).json({ message: "Failed to submit category suggestion" });
     }
   });
 

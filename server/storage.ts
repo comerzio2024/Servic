@@ -4,6 +4,7 @@ import {
   services,
   reviews,
   favorites,
+  submittedCategories,
   type User,
   type UpsertUser,
   type Category,
@@ -14,6 +15,8 @@ import {
   type InsertReview,
   type Favorite,
   type InsertFavorite,
+  type SubmittedCategory,
+  type InsertSubmittedCategory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, ilike, or } from "drizzle-orm";
@@ -53,6 +56,9 @@ export interface IStorage {
   addFavorite(userId: string, serviceId: string): Promise<Favorite>;
   removeFavorite(userId: string, serviceId: string): Promise<void>;
   isFavorite(userId: string, serviceId: string): Promise<boolean>;
+
+  // Category suggestion operations
+  submitCategory(category: InsertSubmittedCategory): Promise<SubmittedCategory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -322,6 +328,15 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return !!result;
+  }
+
+  // Category suggestion operations
+  async submitCategory(category: InsertSubmittedCategory): Promise<SubmittedCategory> {
+    const [submittedCategory] = await db
+      .insert(submittedCategories)
+      .values(category)
+      .returning();
+    return submittedCategory;
   }
 }
 

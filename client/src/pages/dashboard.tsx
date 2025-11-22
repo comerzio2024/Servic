@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import type { Service } from "@shared/schema";
 import { CreateServiceModal } from "@/components/create-service-modal";
+import { EditServiceModal } from "@/components/edit-service-modal";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceWithDetails | null>(null);
 
   const { data: myServices = [], isLoading: servicesLoading } = useQuery<ServiceWithDetails[]>({
     queryKey: ["/api/services", { ownerId: user?.id }],
@@ -244,7 +246,14 @@ export default function Dashboard() {
                                 </Button>
                               ) : (
                                 <>
-                                  <Button variant="outline" size="sm">Edit</Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setEditingService(service)}
+                                    data-testid={`button-edit-service-${service.id}`}
+                                  >
+                                    Edit
+                                  </Button>
                                   {service.status === 'active' ? (
                                     <Button 
                                       variant="secondary" 
@@ -342,6 +351,11 @@ export default function Dashboard() {
       </div>
 
       <CreateServiceModal open={showCreateModal} onOpenChange={setShowCreateModal} />
+      <EditServiceModal 
+        open={!!editingService} 
+        onOpenChange={(open) => !open && setEditingService(null)} 
+        service={editingService}
+      />
     </Layout>
   );
 }

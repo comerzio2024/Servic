@@ -5,10 +5,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { SearchAutocomplete } from "@/components/search-autocomplete";
+import { CategorySuggestionModal } from "@/components/category-suggestion-modal";
+import { useState } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [showCategorySuggestion, setShowCategorySuggestion] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
@@ -140,6 +143,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <li><Link href="/help-center"><span className="hover:text-primary cursor-pointer">Help Center</span></Link></li>
                 <li><Link href="/trust-safety"><span className="hover:text-primary cursor-pointer">Trust & Safety</span></Link></li>
                 <li><Link href="/contact"><span className="hover:text-primary cursor-pointer">Contact Us</span></Link></li>
+                <li>
+                  <button 
+                    onClick={() => setShowCategorySuggestion(true)} 
+                    className="hover:text-primary cursor-pointer"
+                    data-testid="button-suggest-category-footer"
+                  >
+                    Suggest Category
+                  </button>
+                </li>
               </ul>
             </div>
             <div>
@@ -155,6 +167,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+      <CategorySuggestionModal open={showCategorySuggestion} onOpenChange={setShowCategorySuggestion} />
     </div>
   );
 }
