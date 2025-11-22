@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload, Edit, Star } from "lucide-react";
@@ -149,6 +150,34 @@ export function ImageManager({
     setDraggedIndex(null);
   };
 
+  const handleSetMainImage = (index: number) => {
+    if (index === 0) {
+      // Already first, just update the main index
+      onMainImageChange(0);
+      return;
+    }
+
+    // Move the selected image to first position
+    const newImages = [...images];
+    const newMetadata = [...imageMetadata];
+    
+    const selectedImage = newImages[index];
+    const selectedMeta = newMetadata[index];
+    
+    // Remove from current position
+    newImages.splice(index, 1);
+    newMetadata.splice(index, 1);
+    
+    // Insert at first position
+    newImages.unshift(selectedImage);
+    newMetadata.unshift(selectedMeta);
+    
+    // Update all state
+    onImagesChange(newImages);
+    onMetadataChange(newMetadata);
+    onMainImageChange(0); // Main image is now at index 0
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -187,18 +216,24 @@ export function ImageManager({
       {/* Image grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          {images.map((img, idx) => (
-            <div
-              key={idx}
-              draggable
-              onDragStart={() => handleDragStart(idx)}
-              onDragOver={(e) => handleDragOver(e, idx)}
-              onDragEnd={handleDragEnd}
-              className={`relative group cursor-move transition-opacity ${
-                draggedIndex === idx ? 'opacity-50' : ''
-              }`}
-              data-testid={`image-preview-${idx}`}
-            >
+          <AnimatePresence mode="popLayout">
+            {images.map((img, idx) => (
+              <motion.div
+                key={img}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3, layout: { duration: 0.4 } }}
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragEnd={handleDragEnd}
+                className={`relative group cursor-move transition-opacity ${
+                  draggedIndex === idx ? 'opacity-50' : ''
+                }`}
+                data-testid={`image-preview-${idx}`}
+              >
               <img 
                 src={img} 
                 alt={`Service ${idx}`} 
@@ -219,7 +254,7 @@ export function ImageManager({
                   type="button"
                   size="sm"
                   variant="secondary"
-                  onClick={() => onMainImageChange(idx)}
+                  onClick={() => handleSetMainImage(idx)}
                   data-testid={`button-set-main-${idx}`}
                   title="Set as main image"
                 >
@@ -246,8 +281,9 @@ export function ImageManager({
                   <X className="w-3 h-3" />
                 </Button>
               </div>
-            </div>
+            </motion.div>
           ))}
+          </AnimatePresence>
         </div>
       )}
 

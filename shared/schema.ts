@@ -217,6 +217,8 @@ export const insertServiceSchema = createInsertSchema(services, {
   priceList: z.any().optional(),
 }).omit({
   id: true,
+  ownerId: true,
+  expiresAt: true,
   createdAt: true,
   updatedAt: true,
   viewCount: true,
