@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { categories, users, services, reviews } from "@shared/schema";
+import { categories, users, services, reviews, plans } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 const CATEGORIES = [
@@ -49,9 +49,91 @@ const SAMPLE_USERS = [
   },
 ];
 
+const DEFAULT_PLANS = [
+  {
+    name: "Free",
+    slug: "free",
+    description: "Get started with basic features",
+    priceMonthly: "0.00",
+    priceYearly: "0.00",
+    maxImages: 2,
+    listingDurationDays: 7,
+    canRenew: true,
+    featuredListing: false,
+    prioritySupport: false,
+    analyticsAccess: false,
+    customBranding: false,
+    isActive: true,
+    sortOrder: 0,
+  },
+  {
+    name: "Basic",
+    slug: "basic",
+    description: "Perfect for individual service providers",
+    priceMonthly: "19.00",
+    priceYearly: "190.00",
+    maxImages: 4,
+    listingDurationDays: 14,
+    canRenew: true,
+    featuredListing: false,
+    prioritySupport: false,
+    analyticsAccess: false,
+    customBranding: false,
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    name: "Premium",
+    slug: "premium",
+    description: "Advanced features for growing businesses",
+    priceMonthly: "49.00",
+    priceYearly: "490.00",
+    maxImages: 10,
+    listingDurationDays: 30,
+    canRenew: true,
+    featuredListing: true,
+    prioritySupport: true,
+    analyticsAccess: true,
+    customBranding: false,
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    name: "Enterprise",
+    slug: "enterprise",
+    description: "Full features for established businesses",
+    priceMonthly: "99.00",
+    priceYearly: "990.00",
+    maxImages: 20,
+    listingDurationDays: 60,
+    canRenew: true,
+    featuredListing: true,
+    prioritySupport: true,
+    analyticsAccess: true,
+    customBranding: true,
+    isActive: true,
+    sortOrder: 3,
+  },
+];
+
 export async function seedDatabase() {
   try {
     console.log("Seeding database...");
+
+    // Seed plans first (before users, as users will reference plans)
+    for (const plan of DEFAULT_PLANS) {
+      const existing = await db
+        .select()
+        .from(plans)
+        .where(eq(plans.slug, plan.slug));
+
+      if (existing.length === 0) {
+        await db.insert(plans).values(plan);
+        console.log(`Created plan: ${plan.name}`);
+      } else {
+        console.log(`Plan already exists: ${plan.name}`);
+      }
+    }
 
     // Seed categories
     for (const category of CATEGORIES) {

@@ -24,6 +24,31 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Plans table
+export const plans = pgTable("plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).unique().notNull(),
+  description: text("description"),
+  priceMonthly: decimal("price_monthly", { precision: 10, scale: 2 }).notNull(),
+  priceYearly: decimal("price_yearly", { precision: 10, scale: 2 }).notNull(),
+  maxImages: integer("max_images").default(4).notNull(),
+  listingDurationDays: integer("listing_duration_days").default(14).notNull(),
+  canRenew: boolean("can_renew").default(true).notNull(),
+  featuredListing: boolean("featured_listing").default(false).notNull(),
+  prioritySupport: boolean("priority_support").default(false).notNull(),
+  analyticsAccess: boolean("analytics_access").default(false).notNull(),
+  customBranding: boolean("custom_branding").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const plansRelations = relations(plans, ({ many }) => ({
+  users: many(users),
+}));
+
 // Users table (extended for marketplace)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -32,12 +57,18 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   isVerified: boolean("is_verified").default(false).notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
+  planId: varchar("plan_id").references(() => plans.id),
   marketingPackage: varchar("marketing_package", { enum: ["basic", "pro", "premium", "enterprise"] }).default("basic"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
+  plan: one(plans, {
+    fields: [users.planId],
+    references: [plans.id],
+  }),
   services: many(services),
   reviews: many(reviews),
   favorites: many(favorites),
@@ -186,6 +217,9 @@ export const favoritesRelations = relations(favorites, ({ one }) => ({
 }));
 
 // Types
+export type Plan = typeof plans.$inferSelect;
+export type InsertPlan = typeof plans.$inferInsert;
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
@@ -260,4 +294,15 @@ export const insertSubmittedCategorySchema = createInsertSchema(submittedCategor
   id: true,
   createdAt: true,
   status: true,
+});
+
+export const insertPlanSchema = createInsertSchema(plans, {
+  name: z.string().min(3, "Plan name must be at least 3 characters").max(100),
+  slug: z.string().min(3, "Slug must be at least 3 characters").max(100),
+  maxImages: z.number().min(1).max(100),
+  listingDurationDays: z.number().min(1).max(365),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });

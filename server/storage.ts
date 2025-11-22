@@ -5,6 +5,7 @@ import {
   reviews,
   favorites,
   submittedCategories,
+  plans,
   type User,
   type UpsertUser,
   type Category,
@@ -17,15 +18,27 @@ import {
   type InsertFavorite,
   type SubmittedCategory,
   type InsertSubmittedCategory,
+  type Plan,
+  type InsertPlan,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, ilike, or } from "drizzle-orm";
 
 export interface IStorage {
+  // Plan operations
+  getPlans(): Promise<Plan[]>;
+  getPlan(id: string): Promise<Plan | undefined>;
+  getPlanBySlug(slug: string): Promise<Plan | undefined>;
+  createPlan(plan: InsertPlan): Promise<Plan>;
+  updatePlan(id: string, plan: Partial<InsertPlan>): Promise<Plan | undefined>;
+  deletePlan(id: string): Promise<void>;
+  
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserVerification(id: string, isVerified: boolean): Promise<User | undefined>;
+  updateUserPlan(userId: string, planId: string): Promise<User | undefined>;
+  updateUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
   
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -59,6 +72,8 @@ export interface IStorage {
 
   // Category suggestion operations
   submitCategory(category: InsertSubmittedCategory): Promise<SubmittedCategory>;
+  getCategorySuggestions(status?: string): Promise<Array<SubmittedCategory & { user: User }>>;
+  updateCategorySuggestionStatus(id: string, status: string): Promise<SubmittedCategory | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -337,6 +352,88 @@ export class DatabaseStorage implements IStorage {
       .values(category)
       .returning();
     return submittedCategory;
+  }
+
+  async getCategorySuggestions(status?: string): Promise<Array<SubmittedCategory & { user: User }>> {
+    let query = db
+      .select({
+        suggestion: submittedCategories,
+        user: users,
+      })
+      .from(submittedCategories)
+      .leftJoin(users, eq(submittedCategories.userId, users.id))
+      .orderBy(desc(submittedCategories.createdAt))
+      .$dynamic();
+
+    if (status) {
+      query = query.where(eq(submittedCategories.status, status as any));
+    }
+
+    const results = await query;
+    return results.map((row) => ({
+      ...row.suggestion,
+      user: row.user!,
+    }));
+  }
+
+  async updateCategorySuggestionStatus(id: string, status: string): Promise<SubmittedCategory | undefined> {
+    const [updatedSuggestion] = await db
+      .update(submittedCategories)
+      .set({ status: status as any })
+      .where(eq(submittedCategories.id, id))
+      .returning();
+    return updatedSuggestion;
+  }
+
+  // Plan operations
+  async getPlans(): Promise<Plan[]> {
+    return await db.select().from(plans).orderBy(plans.sortOrder);
+  }
+
+  async getPlan(id: string): Promise<Plan | undefined> {
+    const [plan] = await db.select().from(plans).where(eq(plans.id, id));
+    return plan;
+  }
+
+  async getPlanBySlug(slug: string): Promise<Plan | undefined> {
+    const [plan] = await db.select().from(plans).where(eq(plans.slug, slug));
+    return plan;
+  }
+
+  async createPlan(plan: InsertPlan): Promise<Plan> {
+    const [newPlan] = await db.insert(plans).values(plan).returning();
+    return newPlan;
+  }
+
+  async updatePlan(id: string, planData: Partial<InsertPlan>): Promise<Plan | undefined> {
+    const [updatedPlan] = await db
+      .update(plans)
+      .set({ ...planData, updatedAt: new Date() })
+      .where(eq(plans.id, id))
+      .returning();
+    return updatedPlan;
+  }
+
+  async deletePlan(id: string): Promise<void> {
+    await db.delete(plans).where(eq(plans.id, id));
+  }
+
+  async updateUserPlan(userId: string, planId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ planId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ isAdmin, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 
