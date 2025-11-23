@@ -59,13 +59,35 @@ export default function Home() {
   // Auto-load user's saved location on mount (works for all users with stored location)
   useEffect(() => {
     if (user && user.locationLat && user.locationLng && !searchLocation) {
+      // Authenticated user profile location takes priority
       setSearchLocation({
         lat: parseFloat(user.locationLat as any),
         lng: parseFloat(user.locationLng as any),
         name: user.preferredLocationName || "Your Location"
       });
+    } else if (!searchLocation) {
+      // Try to load from localStorage for unauthenticated users or those without profile location
+      try {
+        const saved = localStorage.getItem('lastSearchLocation');
+        if (saved) {
+          setSearchLocation(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.error('Failed to load saved location from localStorage:', error);
+      }
     }
-  }, [user, searchLocation]);
+  }, [user]);
+
+  // Save search location to localStorage whenever it changes (for unauthenticated users)
+  useEffect(() => {
+    if (searchLocation) {
+      try {
+        localStorage.setItem('lastSearchLocation', JSON.stringify(searchLocation));
+      } catch (error) {
+        console.error('Failed to save location to localStorage:', error);
+      }
+    }
+  }, [searchLocation]);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<CategoryWithTemporary[]>({
     queryKey: ["/api/categories"],
