@@ -52,6 +52,10 @@ export default function Profile() {
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || "");
   
+  const [mainLocationName, setMainLocationName] = useState(user?.preferredLocationName || "");
+  const [mainLocationLat, setMainLocationLat] = useState(user?.locationLat ? parseFloat(user.locationLat as any) : null);
+  const [mainLocationLng, setMainLocationLng] = useState(user?.locationLng ? parseFloat(user.locationLng as any) : null);
+  
   const [editingAddress, setEditingAddress] = useState<SelectAddress | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
@@ -154,7 +158,7 @@ export default function Profile() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { firstName?: string; lastName?: string; phoneNumber?: string; profileImageUrl?: string }) => {
+    mutationFn: async (data: { firstName?: string; lastName?: string; phoneNumber?: string; profileImageUrl?: string; locationLat?: number | null; locationLng?: number | null; preferredLocationName?: string }) => {
       const response = await fetch('/api/users/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -848,6 +852,75 @@ export default function Profile() {
                       {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Location of Interest</CardTitle>
+                  <CardDescription>Set your main location to auto-load services on the home page</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <AddressAutocomplete
+                      onAddressSelect={(address) => {
+                        if (address) {
+                          setMainLocationName(address.city || address.displayName);
+                          setMainLocationLat(address.lat);
+                          setMainLocationLng(address.lng);
+                        } else {
+                          setMainLocationName("");
+                          setMainLocationLat(null);
+                          setMainLocationLng(null);
+                        }
+                      }}
+                      label="Search for your location"
+                      initialValue={mainLocationName}
+                      required={false}
+                    />
+                    
+                    {mainLocationName && mainLocationLat && mainLocationLng && (
+                      <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <div className="flex items-start gap-3">
+                          <MapPin className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-slate-900">{mainLocationName}</p>
+                            <p className="text-sm text-slate-500 mt-1">
+                              {mainLocationLat.toFixed(4)}, {mainLocationLng.toFixed(4)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => updateProfileMutation.mutate({
+                          locationLat: mainLocationLat,
+                          locationLng: mainLocationLng,
+                          preferredLocationName: mainLocationName
+                        })}
+                        disabled={!mainLocationName || updateProfileMutation.isPending}
+                        data-testid="button-save-location"
+                      >
+                        {updateProfileMutation.isPending ? "Saving..." : "Save Location"}
+                      </Button>
+                      
+                      {mainLocationName && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setMainLocationName("");
+                            setMainLocationLat(null);
+                            setMainLocationLng(null);
+                          }}
+                          data-testid="button-clear-location"
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
