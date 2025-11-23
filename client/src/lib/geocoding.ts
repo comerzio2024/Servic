@@ -84,7 +84,7 @@ export async function geocodeLocation(query: string): Promise<GeocodeResult> {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ query: query.trim() }),
+      body: JSON.stringify({ location: query.trim() }),
     });
 
     if (!response.ok) {
