@@ -232,6 +232,7 @@ export default function Home() {
         onCategoryChange={setSelectedCategory}
         serviceCount={services.length}
         categoryCounts={categoryServiceCounts}
+        newCounts={newCountsMap}
       />
 
       {isAuthenticated && (
@@ -416,65 +417,6 @@ export default function Home() {
         </section>
       )}
 
-      <section className="py-12 container mx-auto px-4" data-testid="categories-section">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold">Browse by Category</h2>
-        </div>
-        
-        {categoriesLoading ? (
-          <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={cn(
-                "p-6 rounded-lg border-2 transition-all flex flex-col items-center gap-3 hover:shadow-md",
-                selectedCategory === null
-                  ? "border-primary bg-primary/10"
-                  : "border-gray-200 hover:border-primary/50"
-              )}
-              data-testid="category-card-all"
-            >
-              <div className="p-3 rounded-full bg-primary/10">
-                <Sparkles className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-center">All Categories</h3>
-              <p className="text-sm text-muted-foreground">{services.length} services</p>
-            </button>
-            
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={cn(
-                  "relative p-6 rounded-lg border-2 transition-all flex flex-col items-center gap-3 hover:shadow-md",
-                  selectedCategory === cat.id
-                    ? "border-primary bg-primary/10"
-                    : "border-gray-200 hover:border-primary/50"
-                )}
-                data-testid={`category-card-${cat.slug}`}
-              >
-                {newCountsMap[cat.id] > 0 && (
-                  <Badge variant="secondary" className="absolute top-2 right-2" data-testid={`badge-new-count-${cat.slug}`}>
-                    {newCountsMap[cat.id]} new
-                  </Badge>
-                )}
-                {cat.icon && (
-                  <div className="p-3 rounded-full bg-secondary w-16 h-16 flex items-center justify-center">
-                    <span className="text-2xl md:text-3xl">{cat.icon}</span>
-                  </div>
-                )}
-                <h3 className="font-semibold text-center">{cat.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {categoryServiceCounts[cat.id] || 0} services
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
 
       <section className="py-12 bg-slate-50" data-testid="services-section">
         <div className="container mx-auto px-4">

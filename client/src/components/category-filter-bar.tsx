@@ -13,6 +13,7 @@ interface CategoryFilterBarProps {
   onCategoryChange: (categoryId: string | null) => void;
   serviceCount?: number;
   categoryCounts?: Record<string, number>;
+  newCounts?: Record<string, number>;
 }
 
 export function CategoryFilterBar({
@@ -21,6 +22,7 @@ export function CategoryFilterBar({
   onCategoryChange,
   serviceCount = 0,
   categoryCounts = {},
+  newCounts = {},
 }: CategoryFilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -90,13 +92,20 @@ export function CategoryFilterBar({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onCategoryChange(category.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0",
+                  "relative inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shrink-0",
                   selectedCategory === category.id
                     ? "bg-primary text-primary-foreground shadow-md"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 )}
                 data-testid={`category-filter-${category.slug}`}
               >
+                {newCounts[category.id] > 0 && (
+                  <div className="absolute -top-2 -right-2 flex items-center justify-center">
+                    <div className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {newCounts[category.id]}
+                    </div>
+                  </div>
+                )}
                 {category.icon && (
                   <span className="text-lg">{category.icon}</span>
                 )}
