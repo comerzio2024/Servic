@@ -2,13 +2,14 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRoute, useLocation, Link } from "wouter";
-import { Star, MapPin, CheckCircle2, Calendar, ShieldCheck, Flag, Share2, Heart, Lock, Hash } from "lucide-react";
-import { useState } from "react";
+import { Star, MapPin, CheckCircle2, Calendar, ShieldCheck, Flag, Share2, Heart, Lock, Hash, Navigation } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, type ServiceWithDetails, type ReviewWithUser } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { ServiceMap } from "@/components/service-map";
 
 export default function ServiceDetail() {
   const [match, params] = useRoute("/service/:id");
@@ -17,6 +18,7 @@ export default function ServiceDetail() {
   const [isContactRevealed, setIsContactRevealed] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
@@ -57,6 +59,23 @@ export default function ServiceDetail() {
       });
     },
   });
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log("Geolocation permission denied or unavailable:", error);
+        }
+      );
+    }
+  }, []);
 
   const handleContact = () => {
     if (!isAuthenticated) {
@@ -190,6 +209,16 @@ export default function ServiceDetail() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Location Map Section */}
+              <div className="bg-white rounded-2xl shadow-sm border border-border p-6 md:p-8">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Where to find this service
+                </h3>
+                
+                <ServiceMap service={service} userLocation={userLocation} />
               </div>
 
               {/* Reviews Section */}

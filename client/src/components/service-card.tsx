@@ -58,24 +58,32 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
       }
     },
     onMutate: async () => {
+      // Save previous state for potential rollback
+      const previousState = isFavorited;
       // Optimistic update
       setIsFavorited(!isFavorited);
+      return { previousState };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables, context) => {
+      // Use previousState to determine action
+      const wasAdded = context?.previousState === false;
+      
       // Invalidate favorites queries
       queryClient.invalidateQueries({ queryKey: ["/api/favorites"] });
       queryClient.invalidateQueries({ queryKey: ["/api/favorites", service.id, "status"] });
       
       toast({
-        title: isFavorited ? "Removed from favorites" : "Added to favorites",
-        description: isFavorited 
-          ? "Service removed from your favorites"
-          : "Service added to your favorites",
+        title: wasAdded ? "Added to favorites" : "Removed from favorites",
+        description: wasAdded 
+          ? "Service saved to your favorites" 
+          : "Service removed from your favorites",
       });
     },
-    onError: (error: any) => {
-      // Revert optimistic update
-      setIsFavorited(!isFavorited);
+    onError: (error: any, variables, context) => {
+      // Revert optimistic update using saved state
+      if (context?.previousState !== undefined) {
+        setIsFavorited(context.previousState);
+      }
       
       toast({
         title: "Error",

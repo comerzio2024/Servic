@@ -215,6 +215,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/services/hashtag/:hashtag', async (req, res) => {
+    try {
+      const { hashtag } = req.params;
+      const services = await storage.getServicesByHashtag(hashtag);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching services by hashtag:", error);
+      res.status(500).json({ message: "Failed to fetch services by hashtag" });
+    }
+  });
+
   app.get('/api/services', async (req, res) => {
     try {
       const { categoryId, ownerId, status, search } = req.query;
