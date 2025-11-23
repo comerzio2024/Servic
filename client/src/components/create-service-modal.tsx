@@ -16,6 +16,7 @@ import type { PlatformSettings } from "@shared/schema";
 import { ImageManager } from "@/components/image-manager";
 import { ContactInput, type Contact } from "@/components/contact-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LocationAutocomplete } from "@/components/location-autocomplete";
 
 interface CreateServiceModalProps {
   open: boolean;
@@ -39,7 +40,7 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
     priceText: "",
     priceList: [] as Array<{ description: string; price: string; unit: string }>,
     priceUnit: "hour",
-    locations: [""],
+    locations: [] as string[],
     contacts: [] as Contact[],
     images: [] as string[],
     imageMetadata: [] as Array<any>,
@@ -202,7 +203,7 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
       priceText: "",
       priceList: [],
       priceUnit: "hour",
-      locations: [""],
+      locations: [],
       contacts: [],
       images: [],
       imageMetadata: [],
@@ -216,26 +217,6 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
     setShowHashtagSuggestions(false);
   };
 
-  const addLocation = () => {
-    setFormData((prev) => ({
-      ...prev,
-      locations: [...prev.locations, ""],
-    }));
-  };
-
-  const updateLocation = (index: number, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      locations: prev.locations.map((loc, i) => (i === index ? value : loc)),
-    }));
-  };
-
-  const removeLocation = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      locations: prev.locations.filter((_, i) => i !== index),
-    }));
-  };
 
   const addPriceItem = () => {
     setFormData((prev) => ({
@@ -703,12 +684,6 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
 
               {/* Locations */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Service Locations *</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addLocation} data-testid="button-add-location">
-                    <Plus className="w-4 h-4 mr-1" /> Add Location
-                  </Button>
-                </div>
                 {addressErrors.length > 0 && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -721,29 +696,16 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
                     </AlertDescription>
                   </Alert>
                 )}
-                {formData.locations.map((location, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input
-                      placeholder="City or Region (e.g., Zurich, Bern)"
-                      value={location}
-                      onChange={(e) => updateLocation(idx, e.target.value)}
-                      data-testid={`input-location-${idx}`}
-                    />
-                    {formData.locations.length > 1 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => removeLocation(idx)}
-                        data-testid={`button-remove-location-${idx}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                <LocationAutocomplete
+                  locations={formData.locations.filter(l => l.trim())}
+                  onLocationsChange={(locations) => setFormData(prev => ({ ...prev, locations }))}
+                  maxLocations={10}
+                  label="Service Locations"
+                  required={true}
+                  testIdPrefix="service-location"
+                />
                 {settings?.enableSwissAddressValidation && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mt-2">
                     Addresses will be validated to ensure they are in Switzerland
                   </p>
                 )}

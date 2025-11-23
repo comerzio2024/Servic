@@ -1289,6 +1289,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Location-Based Services Routes
+  app.get('/api/location/search', async (req, res) => {
+    try {
+      const { q, limit = '10' } = req.query;
+      
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        return res.json([]);
+      }
+
+      const query = q.trim();
+      const limitNum = Math.min(parseInt(limit as string, 10) || 10, 20);
+
+      // Use Nominatim API (OpenStreetMap) for location search
+      const encodedQuery = encodeURIComponent(query);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=${limitNum}&countrycodes=ch&addressdetails=1`;
+
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'ServiceMarketplace/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Location search service unavailable');
+      }
+
+      const results = await response.json();
+
+      if (!results || results.length === 0) {
+        return res.json([]);
+      }
+
+      // Format results to include city, postcode, canton
+      const formattedResults = results.map((result: any) => {
+        const address = result.address || {};
+        const city = address.city || address.town || address.village || address.municipality || result.name;
+        const postcode = address.postcode || '';
+        const canton = address.state || '';
+        
+        // Create a display name in format: "City, Postcode, Canton"
+        const parts = [city, postcode, canton].filter(p => p);
+        const displayName = parts.join(', ');
+        
+        return {
+          id: result.place_id,
+          displayName,
+          city,
+          postcode,
+          canton,
+          fullAddress: result.display_name,
+          lat: parseFloat(result.lat),
+          lng: parseFloat(result.lon),
+        };
+      });
+
+      res.json(formattedResults);
+    } catch (error: any) {
+      console.error("Error searching locations:", error);
+      res.status(500).json({ message: "Failed to search locations" });
+    }
+  });
+
   app.post('/api/geocode', async (req, res) => {
     try {
       const schema = z.object({

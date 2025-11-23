@@ -15,6 +15,7 @@ import type { Service, PlatformSettings, ServiceContact } from "@shared/schema";
 import { ImageManager } from "@/components/image-manager";
 import { ContactInput, type Contact } from "@/components/contact-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LocationAutocomplete } from "@/components/location-autocomplete";
 
 interface EditServiceModalProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
         priceText: service.priceText || "",
         priceList: service.priceList || [],
         priceUnit: service.priceUnit,
-        locations: service.locations || [""],
+        locations: service.locations || [],
         contacts: mappedContacts.length > 0 ? mappedContacts : [{ contactType: "email", value: "", isPrimary: true }],
         images: service.images || [],
         imageMetadata: service.imageMetadata || [],
@@ -179,27 +180,6 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
   });
 
   if (!formData) return null;
-
-  const addLocation = () => {
-    setFormData((prev: any) => ({
-      ...prev,
-      locations: [...prev.locations, ""],
-    }));
-  };
-
-  const updateLocation = (index: number, value: string) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      locations: prev.locations.map((loc: string, i: number) => (i === index ? value : loc)),
-    }));
-  };
-
-  const removeLocation = (index: number) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      locations: prev.locations.filter((_: any, i: number) => i !== index),
-    }));
-  };
 
   const addPriceItem = () => {
     setFormData((prev: any) => ({
@@ -593,12 +573,6 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
               )}
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Service Locations</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addLocation}>
-                    <Plus className="w-4 h-4 mr-1" /> Add Location
-                  </Button>
-                </div>
                 {addressErrors.length > 0 && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -611,18 +585,16 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
                     </AlertDescription>
                   </Alert>
                 )}
-                {formData.locations.map((location: string, idx: number) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input value={location} onChange={(e) => updateLocation(idx, e.target.value)} />
-                    {formData.locations.length > 1 && (
-                      <Button type="button" size="sm" variant="destructive" onClick={() => removeLocation(idx)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                <LocationAutocomplete
+                  locations={formData.locations.filter((l: string) => l.trim())}
+                  onLocationsChange={(locations) => setFormData((prev: any) => ({ ...prev, locations }))}
+                  maxLocations={10}
+                  label="Service Locations"
+                  required={true}
+                  testIdPrefix="edit-service-location"
+                />
                 {settings?.enableSwissAddressValidation && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mt-2">
                     Addresses will be validated to ensure they are in Switzerland
                   </p>
                 )}
