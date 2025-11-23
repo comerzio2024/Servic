@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Menu, PlusCircle, LogOut } from "lucide-react";
+import { Menu, PlusCircle, LogOut, Heart } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +39,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
               <Link href="/"><span className="hover:text-primary transition-colors cursor-pointer">Explore</span></Link>
               <Link href="/categories"><span className="hover:text-primary transition-colors cursor-pointer">Categories</span></Link>
+              {isAuthenticated && user && (
+                <Link href="/favorites"><span className="hover:text-primary transition-colors cursor-pointer">Favorites</span></Link>
+              )}
               <Link href="/how-it-works"><span className="hover:text-primary transition-colors cursor-pointer">How it Works</span></Link>
             </nav>
 
@@ -72,7 +75,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setLocation("/dashboard")} data-testid="menu-item-dashboard">My Dashboard</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocation("/profile")} data-testid="menu-item-profile">Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation("/favorites")} data-testid="menu-item-favorites">
+                        <Heart className="w-4 h-4 mr-2" />
+                        Favorites
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation(`/users/${user.id}`)} data-testid="menu-item-profile">My Profile</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => window.location.href = "/api/logout"} className="text-destructive" data-testid="menu-item-logout">
                         <LogOut className="w-4 h-4 mr-2" />
                         Log out
@@ -106,6 +113,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/"><span className="text-lg font-medium cursor-pointer">Explore</span></Link>
                   <Link href="/categories"><span className="text-lg font-medium cursor-pointer">Categories</span></Link>
                   <Link href="/dashboard"><span className="text-lg font-medium cursor-pointer">Dashboard</span></Link>
+                  <Link href="/favorites"><span className="text-lg font-medium cursor-pointer">Favorites</span></Link>
                   <div className="h-px bg-border my-2" />
                   <Button 
                     className="w-full" 
