@@ -196,60 +196,61 @@ export default function BrowseServices() {
 
   // Filter sidebar content
   const FilterContent = () => (
-    <div className="space-y-4">
-      {/* Clear Filters at Top */}
-      {activeFiltersCount > 0 && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={clearFilters}
-          data-testid="button-clear-filters-top"
-        >
-          <X className="w-3.5 h-3.5 mr-1.5" />
-          Clear ({activeFiltersCount})
-        </Button>
-      )}
+    <ScrollArea className="h-[calc(100vh-16rem)]">
+      <div className="py-4 px-6 space-y-6">
+        {/* Clear Filters at Top */}
+        {activeFiltersCount > 0 && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={clearFilters}
+              data-testid="button-clear-filters-top"
+            >
+              <X className="w-3.5 h-3.5 mr-1.5" />
+              Clear ({activeFiltersCount})
+            </Button>
+            <Separator />
+          </>
+        )}
 
-      {activeFiltersCount > 0 && <Separator />}
-
-      {/* Search */}
-      <div className="space-y-2">
-        <Label htmlFor="search-input">Search</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <Input
-            id="search-input"
-            placeholder="Search services..."
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-            }}
-            onBlur={() => {
-              if (searchInput !== searchQuery) {
-                setSearchQuery(searchInput);
-                setCurrentPage(1);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setSearchQuery(searchInput);
-                setCurrentPage(1);
-              }
-            }}
-            className="pl-9"
-            data-testid="input-search"
-          />
+        {/* Search */}
+        <div className="space-y-4">
+          <Label htmlFor="search-input" className="text-base font-semibold">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id="search-input"
+              placeholder="Search services..."
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+              }}
+              onBlur={() => {
+                if (searchInput !== searchQuery) {
+                  setSearchQuery(searchInput);
+                  setCurrentPage(1);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSearchQuery(searchInput);
+                  setCurrentPage(1);
+                }
+              }}
+              className="pl-9"
+              data-testid="input-search"
+            />
+          </div>
         </div>
-      </div>
 
-      <Separator />
+        <Separator />
 
-      {/* Categories */}
-      <div className="space-y-3">
-        <Label>Categories</Label>
-        <ScrollArea className="h-64">
-          <div className="space-y-3 pr-4">
+        {/* Categories */}
+        <div className="space-y-4">
+          <Label className="text-base font-semibold">Categories</Label>
+          <div className="space-y-3">
             {categoriesLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -274,109 +275,107 @@ export default function BrowseServices() {
               ))
             )}
           </div>
-        </ScrollArea>
-      </div>
+        </div>
 
-      <Separator />
+        <Separator />
 
-      {/* Price Range */}
-      <div className="space-y-4">
-        <Label>Price Range (CHF)</Label>
+        {/* Price Range */}
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <Label htmlFor="price-min" className="text-xs text-muted-foreground">
-                Min
-              </Label>
-              <Input
-                id="price-min"
-                type="number"
+          <Label className="text-base font-semibold">Price Range (CHF)</Label>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Label htmlFor="price-min" className="text-xs text-muted-foreground">
+                  Min
+                </Label>
+                <Input
+                  id="price-min"
+                  type="number"
+                  min={0}
+                  max={priceMax}
+                  value={priceMin}
+                  onChange={(e) => {
+                    setPriceMin(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  data-testid="input-price-min"
+                />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="price-max" className="text-xs text-muted-foreground">
+                  Max
+                </Label>
+                <Input
+                  id="price-max"
+                  type="number"
+                  min={priceMin}
+                  max={10000}
+                  value={priceMax}
+                  onChange={(e) => {
+                    setPriceMax(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  data-testid="input-price-max"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Slider
                 min={0}
-                max={priceMax}
-                value={priceMin}
-                onChange={(e) => {
-                  setPriceMin(Number(e.target.value));
+                max={1000}
+                step={1}
+                value={[priceMinDrag, priceMaxDrag]}
+                onValueChange={([min, max]) => {
+                  setPriceMinDrag(min);
+                  setPriceMaxDrag(max);
+                }}
+                onValueCommit={([min, max]) => {
+                  setPriceMin(min);
+                  setPriceMax(max);
+                  setPriceMinDrag(min);
+                  setPriceMaxDrag(max);
                   setCurrentPage(1);
                 }}
-                data-testid="input-price-min"
+                className="w-full transition-opacity hover:opacity-90"
+                data-testid="slider-price-range"
               />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="price-max" className="text-xs text-muted-foreground">
-                Max
-              </Label>
-              <Input
-                id="price-max"
-                type="number"
-                min={priceMin}
-                max={10000}
-                value={priceMax}
-                onChange={(e) => {
-                  setPriceMax(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                data-testid="input-price-max"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Slider
-              min={0}
-              max={1000}
-              step={10}
-              value={[priceMinDrag, priceMaxDrag]}
-              onValueChange={([min, max]) => {
-                setPriceMinDrag(min);
-                setPriceMaxDrag(max);
-              }}
-              onValueCommit={([min, max]) => {
-                setPriceMin(min);
-                setPriceMax(max);
-                setPriceMinDrag(min);
-                setPriceMaxDrag(max);
-                setCurrentPage(1);
-              }}
-              className="w-full"
-              data-testid="slider-price-range"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>CHF {priceMinDrag}</span>
-              <span>CHF {priceMaxDrag}</span>
+              <div className="flex justify-between text-xs text-muted-foreground transition-all">
+                <span>CHF {priceMinDrag}</span>
+                <span>CHF {priceMaxDrag}</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <Separator />
+
+        {/* Location */}
+        <div className="space-y-4">
+          <Label htmlFor="location-input" className="text-base font-semibold">Location</Label>
+          <Input
+            id="location-input"
+            placeholder="City or canton..."
+            value={locationInput}
+            onChange={(e) => {
+              setLocationInput(e.target.value);
+            }}
+            onBlur={() => {
+              if (locationInput !== locationFilter) {
+                setLocationFilter(locationInput);
+                setCurrentPage(1);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setLocationFilter(locationInput);
+                setCurrentPage(1);
+              }
+            }}
+            data-testid="input-location"
+          />
+        </div>
       </div>
-
-      <Separator />
-
-      {/* Location */}
-      <div className="space-y-2">
-        <Label htmlFor="location-input">Location</Label>
-        <Input
-          id="location-input"
-          placeholder="City or canton..."
-          value={locationInput}
-          onChange={(e) => {
-            setLocationInput(e.target.value);
-          }}
-          onBlur={() => {
-            if (locationInput !== locationFilter) {
-              setLocationFilter(locationInput);
-              setCurrentPage(1);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              setLocationFilter(locationInput);
-              setCurrentPage(1);
-            }
-          }}
-          data-testid="input-location"
-        />
-      </div>
-
-      <Separator />
-    </div>
+    </ScrollArea>
   );
 
   return (
