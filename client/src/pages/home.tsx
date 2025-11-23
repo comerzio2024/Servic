@@ -7,10 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Sparkles, ArrowRight, Heart, MapPin, Loader2, Navigation, Search, X } from "lucide-react";
+import { Sparkles, ArrowRight, Heart, MapPin, Loader2, Navigation, Search, X, ChevronDown, ChevronUp } from "lucide-react";
 import heroImg from "@assets/generated_images/abstract_community_connection_hero_background.png";
 import { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +33,8 @@ export default function Home() {
   const [customLocation, setCustomLocation] = useState<{lat: number; lng: number; name: string} | null>(null);
   const [locationSearchQuery, setLocationSearchQuery] = useState("");
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [isNearbyExpanded, setIsNearbyExpanded] = useState(true);
+  const [isFavoritesExpanded, setIsFavoritesExpanded] = useState(true);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<CategoryWithTemporary[]>({
     queryKey: ["/api/categories"],
@@ -242,8 +244,36 @@ export default function Home() {
               <Navigation className="w-6 h-6 text-blue-500" />
               Services Near You
             </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsNearbyExpanded(!isNearbyExpanded)}
+              className="h-8 px-2 hover:bg-slate-100 transition-colors"
+              data-testid="button-toggle-nearby"
+            >
+              {isNearbyExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Hide</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Show</span>
+                </>
+              )}
+            </Button>
           </div>
 
+          <AnimatePresence>
+            {isNearbyExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -380,6 +410,9 @@ export default function Home() {
               )}
             </>
           )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
       )}
 
@@ -391,13 +424,43 @@ export default function Home() {
               Your Favorites
               <Badge variant="secondary" className="ml-2">{favorites.length}</Badge>
             </h2>
-            <Link href="/favorites">
-              <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
-                View All <ArrowRight className="w-4 h-4" />
+            <div className="flex items-center gap-2">
+              <Link href="/favorites">
+                <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
+                  View All <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFavoritesExpanded(!isFavoritesExpanded)}
+                className="h-8 px-2 hover:bg-slate-100 transition-colors"
+                data-testid="button-toggle-favorites"
+              >
+                {isFavoritesExpanded ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" />
+                    <span className="text-xs">Hide</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" />
+                    <span className="text-xs">Show</span>
+                  </>
+                )}
               </Button>
-            </Link>
+            </div>
           </div>
-          
+
+          <AnimatePresence>
+            {isFavoritesExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
           <ScrollArea className="w-full">
             <div className="flex gap-6 pb-4">
               {favorites.map((fav) => (
@@ -414,6 +477,9 @@ export default function Home() {
               ))}
             </div>
           </ScrollArea>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
       )}
 
