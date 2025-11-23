@@ -95,10 +95,10 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
 
   return (
     <Card className={cn(
-      "group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50",
+      "h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50",
       isExpired && "opacity-60 grayscale-[0.5]"
     )}>
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted flex-shrink-0">
         {displayImage ? (
           <img 
             src={displayImage} 
@@ -150,7 +150,7 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
         </div>
       </div>
 
-      <CardContent className="p-5">
+      <CardContent className="p-5 flex-1 flex flex-col">
         <div className="flex justify-between items-start gap-4 mb-3">
           <Link href={`/service/${service.id}`}>
             <h3 className="font-bold text-lg leading-tight text-foreground hover:text-primary cursor-pointer line-clamp-2">

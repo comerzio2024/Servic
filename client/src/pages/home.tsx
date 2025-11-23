@@ -98,23 +98,22 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/60 to-slate-50" />
         </div>
 
-        <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
+        <div className="container mx-auto px-4 py-8 md:py-12 relative z-10">
+          <div className="max-w-3xl mx-auto text-center space-y-4">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary-foreground text-sm font-medium mb-4 border border-primary/30 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary-foreground text-sm font-medium mb-3 border border-primary/30 backdrop-blur-sm">
                 <Sparkles className="w-4 h-4" />
                 AI-Powered Marketplace
               </span>
-              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3 leading-tight">
                 Find the perfect service for your next project
               </h1>
-              <p className="text-lg text-slate-300 mb-8 max-w-2xl mx-auto">
-                Connect with trusted professionals who have been verified by our community. 
-                From home repairs to digital design, we've got you covered.
+              <p className="text-base text-slate-300 mb-6 max-w-2xl mx-auto">
+                Connect with trusted professionals who have been verified by our community.
               </p>
             </motion.div>
 
@@ -122,11 +121,11 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="flex gap-4 justify-center flex-wrap"
+              className="flex gap-3 justify-center flex-wrap"
             >
               <Button 
-                size="lg" 
-                className="h-12 px-8 text-lg font-semibold"
+                size="default" 
+                className="px-6"
                 onClick={() => {
                   const categoriesSection = document.querySelector('[data-testid="categories-section"]');
                   categoriesSection?.scrollIntoView({ behavior: 'smooth' });
@@ -136,9 +135,9 @@ export default function Home() {
                 Browse Categories
               </Button>
               <Button 
-                size="lg" 
+                size="default" 
                 variant="outline"
-                className="h-12 px-8 text-lg font-semibold bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                className="px-6 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
                 onClick={() => {
                   const servicesSection = document.querySelector('[data-testid="services-section"]');
                   servicesSection?.scrollIntoView({ behavior: 'smooth' });
@@ -307,8 +306,8 @@ export default function Home() {
                 data-testid={`category-card-${cat.slug}`}
               >
                 {cat.icon && (
-                  <div className="p-3 rounded-full bg-secondary">
-                    <span className="text-4xl">{cat.icon}</span>
+                  <div className="p-3 rounded-full bg-secondary w-16 h-16 flex items-center justify-center">
+                    <span className="text-2xl md:text-3xl">{cat.icon}</span>
                   </div>
                 )}
                 <h3 className="font-semibold text-center">{cat.name}</h3>
@@ -350,7 +349,7 @@ export default function Home() {
               <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
             </div>
           ) : filteredServices.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
               {filteredServices.map((service, index) => (
                 <motion.div
                   key={service.id}
@@ -358,6 +357,7 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   data-testid={`service-card-${service.id}`}
+                  className="h-full"
                 >
                   <ServiceCard service={service} />
                 </motion.div>
