@@ -27,6 +27,11 @@ export default function BrowseServices() {
   const [location, setLocation] = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+  
   // Parse URL query parameters
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), [location]);
   
@@ -37,6 +42,8 @@ export default function BrowseServices() {
   );
   const [priceMin, setPriceMin] = useState(Number(searchParams.get("priceMin")) || 0);
   const [priceMax, setPriceMax] = useState(Number(searchParams.get("priceMax")) || 1000);
+  const [priceMinDrag, setPriceMinDrag] = useState(Number(searchParams.get("priceMin")) || 0);
+  const [priceMaxDrag, setPriceMaxDrag] = useState(Number(searchParams.get("priceMax")) || 1000);
   const [locationFilter, setLocationFilter] = useState(searchParams.get("location") || "");
   const [sortBy, setSortBy] = useState<SortOption>((searchParams.get("sort") as SortOption) || "newest");
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1);
@@ -183,12 +190,28 @@ export default function BrowseServices() {
 
   // Filter sidebar content
   const FilterContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Clear Filters at Top */}
+      {activeFiltersCount > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={clearFilters}
+          data-testid="button-clear-filters-top"
+        >
+          <X className="w-3.5 h-3.5 mr-1.5" />
+          Clear ({activeFiltersCount})
+        </Button>
+      )}
+
+      {activeFiltersCount > 0 && <Separator />}
+
       {/* Search */}
       <div className="space-y-2">
         <Label htmlFor="search-input">Search</Label>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             id="search-input"
             placeholder="Search services..."
@@ -197,6 +220,7 @@ export default function BrowseServices() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
+            onBlur={() => {}}
             className="pl-9"
             data-testid="input-search"
           />
@@ -284,8 +308,12 @@ export default function BrowseServices() {
               min={0}
               max={1000}
               step={10}
-              value={[priceMin, priceMax]}
+              value={[priceMinDrag, priceMaxDrag]}
               onValueChange={([min, max]) => {
+                setPriceMinDrag(min);
+                setPriceMaxDrag(max);
+              }}
+              onValueCommit={([min, max]) => {
                 setPriceMin(min);
                 setPriceMax(max);
                 setCurrentPage(1);
@@ -294,8 +322,8 @@ export default function BrowseServices() {
               data-testid="slider-price-range"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>CHF {priceMin}</span>
-              <span>CHF {priceMax}</span>
+              <span>CHF {priceMinDrag}</span>
+              <span>CHF {priceMaxDrag}</span>
             </div>
           </div>
         </div>
@@ -319,19 +347,6 @@ export default function BrowseServices() {
       </div>
 
       <Separator />
-
-      {/* Clear Filters */}
-      {activeFiltersCount > 0 && (
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={clearFilters}
-          data-testid="button-clear-filters"
-        >
-          <X className="w-4 h-4 mr-2" />
-          Clear All Filters ({activeFiltersCount})
-        </Button>
-      )}
     </div>
   );
 

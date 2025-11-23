@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, type ServiceWithDetails } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import type { Service, SelectAddress } from "@shared/schema";
 import { CreateServiceModal } from "@/components/create-service-modal";
 import { EditServiceModal } from "@/components/edit-service-modal";
@@ -30,6 +31,7 @@ export default function Profile() {
   const [showCategorySuggestionModal, setShowCategorySuggestionModal] = useState(false);
   const [pendingCategoryCallback, setPendingCategoryCallback] = useState<((categoryId: string) => void) | null>(null);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [serviceToPause, setServiceToPause] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -249,6 +251,15 @@ export default function Profile() {
     setServiceToDelete(id);
   };
 
+  const handlePause = (id: string) => {
+    setServiceToPause(id);
+  };
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   const isExpired = (date: string | Date) => {
     return new Date(date).getTime() < new Date().getTime();
   };
@@ -448,8 +459,9 @@ export default function Profile() {
                                     <Button 
                                       variant="secondary" 
                                       size="sm" 
-                                      onClick={() => handleStatusChange(service.id, 'paused')}
+                                      onClick={() => handlePause(service.id)}
                                       disabled={updateServiceMutation.isPending}
+                                      data-testid={`button-pause-service-${service.id}`}
                                     >
                                       Pause
                                     </Button>
@@ -835,6 +847,26 @@ export default function Profile() {
               data-testid="button-confirm-delete-address"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!serviceToPause} onOpenChange={() => setServiceToPause(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pause Service?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your service will be temporarily hidden from search results. You can reactivate it anytime.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-pause-service">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => serviceToPause && handleStatusChange(serviceToPause, 'paused')}
+              data-testid="button-confirm-pause-service"
+            >
+              Pause Service
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

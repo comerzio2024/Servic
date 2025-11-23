@@ -101,10 +101,11 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
     if (user && formData.contacts.length === 0) {
       const initialContacts: Contact[] = [];
       
-      if (user.phone) {
+      if (user.phoneNumber) {
         initialContacts.push({
           contactType: "phone",
-          value: user.phone,
+          value: user.phoneNumber,
+          name: `${user.firstName} ${user.lastName}`.trim() || undefined,
           isPrimary: true,
           isVerified: user.phoneVerified,
         });

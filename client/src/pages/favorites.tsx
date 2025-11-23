@@ -8,9 +8,15 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, type FavoriteWithService } from "@/lib/api";
+import { useEffect } from "react";
 
 export default function Favorites() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   const { data: favorites = [], isLoading: favoritesLoading } = useQuery<FavoriteWithService[]>({
     queryKey: ["/api/favorites"],
