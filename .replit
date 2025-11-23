@@ -16,7 +16,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 37297
+localPort = 32969
 externalPort = 3003
 
 [[ports]]
@@ -75,3 +75,6 @@ TWILIO_AUTH_TOKEN = "your_auth_token_here"
 TWILIO_PHONE_NUMBER = "+41123456789"
 EMAIL_SERVICE_PROVIDER = "sendgrid"
 EMAIL_SERVICE_API_KEY = "SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-96bca37c-713f-4712-aaea-c0f4e8f2b4ca"

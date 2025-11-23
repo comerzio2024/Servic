@@ -19,10 +19,6 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
-  // Scroll to top on page load
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -38,6 +34,34 @@ export default function Home() {
   const [hasSearchedLocation, setHasSearchedLocation] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<Array<{lat: number; lng: number; displayName: string; name: string}>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
+  // Auto-collapse categories when scrolling down
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Collapse when scrolling down past the header area
+      if (currentScrollY > lastScrollY && currentScrollY > 200) {
+        setIsCategoriesExpanded(false);
+      }
+      // Expand when scrolling up to top area
+      else if (currentScrollY < 100) {
+        setIsCategoriesExpanded(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<CategoryWithTemporary[]>({
     queryKey: ["/api/categories"],
@@ -279,6 +303,8 @@ export default function Home() {
         serviceCount={services.length}
         categoryCounts={categoryServiceCounts}
         newCounts={newCountsMap}
+        isExpanded={isCategoriesExpanded}
+        setIsExpanded={setIsCategoriesExpanded}
       />
 
       {isAuthenticated && hasSearchedLocation && (
