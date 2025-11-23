@@ -56,8 +56,8 @@ export function CategoryFilterBar({
 
   const displayedCategories = useMemo(() => {
     if (showAllCategories) return categories;
-    // Reserve last spot for "Show More" button, show firstRowCount - 1 categories
-    return categories.slice(0, Math.max(0, firstRowCount - 1));
+    // Reserve spots for "All Services" (1) and "Show More" (1), show firstRowCount - 2 categories
+    return categories.slice(0, Math.max(0, firstRowCount - 2));
   }, [categories, showAllCategories, firstRowCount]);
 
   // Hide entire section if screen is too small (can't fit minimum 3 items)
