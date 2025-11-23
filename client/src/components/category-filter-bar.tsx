@@ -68,13 +68,13 @@ export function CategoryFilterBar({
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="flex gap-3 pt-2 pb-2 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pt-2 pb-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onCategoryChange(null)}
                   className={cn(
-                    "relative shrink-0 w-24 sm:w-28 flex flex-col items-center gap-2 px-2 py-3 rounded-lg border-2 transition-all text-center snap-center",
+                    "relative flex flex-col items-center gap-2 px-3 py-3 rounded-lg border-2 transition-all text-center",
                     selectedCategory === null
                       ? "border-primary bg-primary/10"
                       : "border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-slate-100"
@@ -82,8 +82,8 @@ export function CategoryFilterBar({
                   data-testid="category-filter-all"
                 >
                   <Sparkles className="w-5 h-5 text-primary" />
-                  <span className="text-xs font-semibold leading-tight">All Services</span>
-                  <Badge variant="secondary" className="mt-1 text-xs">
+                  <span className="text-xs font-semibold">All Services</span>
+                  <Badge variant="secondary" className="mt-1">
                     {serviceCount}
                   </Badge>
                 </motion.button>
@@ -95,7 +95,7 @@ export function CategoryFilterBar({
                     whileTap={{ scale: 0.98 }}
                     onClick={() => onCategoryChange(category.id)}
                     className={cn(
-                      "relative shrink-0 w-24 sm:w-28 flex flex-col items-center gap-2 px-2 py-3 rounded-lg border-2 transition-all text-center snap-center",
+                      "relative flex flex-col items-center gap-2 px-3 py-3 rounded-lg border-2 transition-all text-center",
                       selectedCategory === category.id
                         ? "border-primary bg-primary/10"
                         : "border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-slate-100"
@@ -110,9 +110,9 @@ export function CategoryFilterBar({
                       </div>
                     )}
                     {category.icon && (
-                      <span className="text-xl sm:text-2xl">{category.icon}</span>
+                      <span className="text-2xl">{category.icon}</span>
                     )}
-                    <span className="text-xs font-semibold line-clamp-2 leading-tight">{category.name}</span>
+                    <span className="text-xs font-semibold line-clamp-2">{category.name}</span>
                     <Badge variant="outline" className="text-xs">
                       {categoryCounts[category.id] || 0}
                     </Badge>
@@ -124,13 +124,13 @@ export function CategoryFilterBar({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowAllCategories(true)}
-                    className="relative shrink-0 w-24 sm:w-28 flex flex-col items-center gap-2 px-2 py-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-slate-100 transition-all text-center snap-center"
+                    className="relative flex flex-col items-center gap-2 px-3 py-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-slate-100 transition-all text-center"
                     data-testid="button-show-more-categories"
                   >
                     <ChevronDown className="w-5 h-5 text-slate-500" />
-                    <span className="text-xs font-semibold">More</span>
+                    <span className="text-xs font-semibold">Show More</span>
                     <span className="text-xs text-slate-500">
-                      +{categories.length - (firstRowCount - 1)}
+                      {categories.length - (firstRowCount - 1)} more
                     </span>
                   </motion.button>
                 )}
@@ -140,11 +140,11 @@ export function CategoryFilterBar({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowAllCategories(false)}
-                    className="relative shrink-0 w-24 sm:w-28 flex flex-col items-center gap-2 px-2 py-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-slate-100 transition-all text-center snap-center"
+                    className="relative flex flex-col items-center gap-2 px-3 py-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-slate-100 transition-all text-center"
                     data-testid="button-show-less-categories"
                   >
                     <ChevronUp className="w-5 h-5 text-slate-500" />
-                    <span className="text-xs font-semibold">Less</span>
+                    <span className="text-xs font-semibold">Show Less</span>
                   </motion.button>
                 )}
               </div>

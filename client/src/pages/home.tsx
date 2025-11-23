@@ -351,20 +351,22 @@ export default function Home() {
                   <Loader2 className="w-8 h-8 text-primary animate-spin" />
                 </div>
               ) : nearbyServices.length > 0 ? (
-                <div className="flex gap-4 sm:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4">
-                  {nearbyServices.map((service) => (
-                    <motion.div
-                      key={service.id}
-                      className="w-72 sm:w-80 flex-shrink-0"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                      data-testid={`nearby-service-card-${service.id}`}
-                    >
-                      <ServiceCard service={service} />
-                    </motion.div>
-                  ))}
-                </div>
+                <ScrollArea className="w-full">
+                  <div className="flex gap-6 pb-4">
+                    {nearbyServices.map((service) => (
+                      <motion.div
+                        key={service.id}
+                        className="w-80 flex-shrink-0"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        data-testid={`nearby-service-card-${service.id}`}
+                      >
+                        <ServiceCard service={service} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </ScrollArea>
               ) : (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-8 text-center">
                   <MapPin className="w-12 h-12 text-slate-400 mx-auto mb-4" />
@@ -396,20 +398,22 @@ export default function Home() {
             </Link>
           </div>
           
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4">
-            {favorites.map((fav) => (
-              <motion.div
-                key={fav.id}
-                className="w-72 sm:w-80 flex-shrink-0"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                data-testid={`favorite-card-${fav.id}`}
-              >
-                <ServiceCard service={fav.service} />
-              </motion.div>
-            ))}
-          </div>
+          <ScrollArea className="w-full">
+            <div className="flex gap-6 pb-4">
+              {favorites.map((fav) => (
+                <motion.div
+                  key={fav.id}
+                  className="w-80 flex-shrink-0"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  data-testid={`favorite-card-${fav.id}`}
+                >
+                  <ServiceCard service={fav.service} />
+                </motion.div>
+              ))}
+            </div>
+          </ScrollArea>
         </section>
       )}
 
@@ -455,7 +459,7 @@ export default function Home() {
               <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
             </div>
           ) : filteredServices.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 auto-rows-fr">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
               {filteredServices.map((service, index) => (
                 <motion.div
                   key={service.id}
