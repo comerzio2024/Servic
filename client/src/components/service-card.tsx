@@ -210,7 +210,7 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
         <div className="flex items-center gap-2 mb-3">
           <div className="flex items-center text-amber-400">
             <Star className="w-4 h-4 fill-current" />
-            <span className="ml-1 text-sm font-bold text-foreground">{service.rating}</span>
+            <span className="ml-1 text-sm font-bold text-foreground">{service.rating.toFixed(1)}</span>
           </div>
           <span className="text-muted-foreground text-sm">({service.reviewCount} reviews)</span>
         </div>
