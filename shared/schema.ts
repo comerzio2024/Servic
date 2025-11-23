@@ -67,6 +67,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   phone: varchar("phone", { length: 50 }),
+  phoneNumber: varchar("phone_number", { length: 50 }),
   isVerified: boolean("is_verified").default(false).notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   phoneVerified: boolean("phone_verified").default(false).notNull(),
@@ -92,6 +93,31 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   favorites: many(favorites),
   submittedCategories: many(submittedCategories),
   aiConversations: many(aiConversations),
+  addresses: many(addresses),
+}));
+
+// Addresses table
+export const addresses = pgTable("addresses", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  label: varchar("label", { length: 100 }),
+  street: varchar("street", { length: 255 }).notNull(),
+  city: varchar("city", { length: 100 }).notNull(),
+  postalCode: varchar("postal_code", { length: 20 }).notNull(),
+  canton: varchar("canton", { length: 100 }),
+  country: varchar("country", { length: 100 }).notNull().default("Switzerland"),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_addresses_user").on(table.userId),
+]);
+
+export const addressesRelations = relations(addresses, ({ one }) => ({
+  user: one(users, {
+    fields: [addresses.userId],
+    references: [users.id],
+  }),
 }));
 
 // Categories table
@@ -337,6 +363,8 @@ export type InsertFavorite = typeof favorites.$inferInsert;
 export type SubmittedCategory = typeof submittedCategories.$inferSelect;
 export type InsertSubmittedCategory = typeof submittedCategories.$inferInsert;
 
+export type SelectAddress = typeof addresses.$inferSelect;
+
 // Zod schemas for validation
 export const insertServiceSchema = createInsertSchema(services, {
   title: z.string().min(5, "Title must be at least 5 characters").max(200),
@@ -435,3 +463,17 @@ export const insertAiConversationSchema = createInsertSchema(aiConversations, {
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertAddressSchema = createInsertSchema(addresses, {
+  street: z.string().min(1, "Street is required").max(255),
+  city: z.string().min(1, "City is required").max(100),
+  postalCode: z.string().min(1, "Postal code is required").max(20),
+  canton: z.string().optional(),
+  label: z.string().optional(),
+}).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAddress = z.infer<typeof insertAddressSchema>;

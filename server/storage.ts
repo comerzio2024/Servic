@@ -10,6 +10,7 @@ import {
   serviceContacts,
   aiConversations,
   temporaryCategories,
+  addresses,
   type User,
   type UserWithPlan,
   type UpsertUser,
@@ -33,6 +34,8 @@ import {
   type InsertAiConversation,
   type TemporaryCategory,
   type InsertTemporaryCategory,
+  type SelectAddress,
+  type InsertAddress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, ilike, or } from "drizzle-orm";
@@ -52,6 +55,13 @@ export interface IStorage {
   updateUserVerification(id: string, isVerified: boolean): Promise<User | undefined>;
   updateUserPlan(userId: string, planId: string): Promise<User | undefined>;
   updateUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
+  updateUserProfile(userId: string, data: { firstName?: string; lastName?: string; phoneNumber?: string }): Promise<User>;
+  
+  // Address operations
+  getAddresses(userId: string): Promise<SelectAddress[]>;
+  createAddress(userId: string, data: InsertAddress): Promise<SelectAddress>;
+  updateAddress(addressId: string, userId: string, data: Partial<InsertAddress>): Promise<SelectAddress>;
+  deleteAddress(addressId: string, userId: string): Promise<void>;
   
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -505,6 +515,58 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserProfile(userId: string, data: { firstName?: string; lastName?: string; phoneNumber?: string }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  // Address operations
+  async getAddresses(userId: string): Promise<SelectAddress[]> {
+    return await db
+      .select()
+      .from(addresses)
+      .where(eq(addresses.userId, userId))
+      .orderBy(desc(addresses.isPrimary), addresses.createdAt);
+  }
+
+  async createAddress(userId: string, data: InsertAddress): Promise<SelectAddress> {
+    const [address] = await db
+      .insert(addresses)
+      .values({ ...data, userId })
+      .returning();
+    return address;
+  }
+
+  async updateAddress(addressId: string, userId: string, data: Partial<InsertAddress>): Promise<SelectAddress> {
+    const [address] = await db
+      .update(addresses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(
+        eq(addresses.id, addressId),
+        eq(addresses.userId, userId)
+      ))
+      .returning();
+    
+    if (!address) {
+      throw new Error("Address not found or unauthorized");
+    }
+    
+    return address;
+  }
+
+  async deleteAddress(addressId: string, userId: string): Promise<void> {
+    await db
+      .delete(addresses)
+      .where(and(
+        eq(addresses.id, addressId),
+        eq(addresses.userId, userId)
+      ));
   }
 
   // Platform settings operations

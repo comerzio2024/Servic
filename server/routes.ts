@@ -14,6 +14,7 @@ import {
   insertServiceContactSchema,
   insertTemporaryCategorySchema,
   insertAiConversationSchema,
+  insertAddressSchema,
 } from "@shared/schema";
 import { categorizeService } from "./aiService";
 import { getAdminAssistance } from "./aiAdminService";
@@ -44,6 +45,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // User profile routes
+  app.patch('/api/users/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { firstName, lastName, phoneNumber } = req.body;
+      
+      const updateData: { firstName?: string; lastName?: string; phoneNumber?: string } = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+      
+      const user = await storage.updateUserProfile(userId, updateData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Address routes
+  app.get('/api/users/me/addresses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const addresses = await storage.getAddresses(userId);
+      res.json(addresses);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      res.status(500).json({ message: "Failed to fetch addresses" });
+    }
+  });
+
+  app.post('/api/users/me/addresses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validated = insertAddressSchema.parse(req.body);
+      const address = await storage.createAddress(userId, validated);
+      res.status(201).json(address);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      console.error("Error creating address:", error);
+      res.status(500).json({ message: "Failed to create address" });
+    }
+  });
+
+  app.patch('/api/users/me/addresses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const addressId = req.params.id;
+      const validated = insertAddressSchema.partial().parse(req.body);
+      const address = await storage.updateAddress(addressId, userId, validated);
+      res.json(address);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      if (error.message === "Address not found or unauthorized") {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error("Error updating address:", error);
+      res.status(500).json({ message: "Failed to update address" });
+    }
+  });
+
+  app.delete('/api/users/me/addresses/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const addressId = req.params.id;
+      await storage.deleteAddress(addressId, userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting address:", error);
+      res.status(500).json({ message: "Failed to delete address" });
     }
   });
 
@@ -1047,18 +1125,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/ai/suggest-hashtags', isAuthenticated, async (req: any, res) => {
     try {
       const schema = z.object({
-        imageUrls: z.array(z.string().url()).min(1, "At least one image URL is required"),
+        imageUrls: z.array(z.string()).min(1, "At least one image is required"),
       });
 
       const validated = schema.parse(req.body);
-      const hashtags = await analyzeImagesForHashtags(validated.imageUrls);
+      
+      // Filter out invalid URLs silently
+      const validUrls = validated.imageUrls.filter(url => {
+        try {
+          // Check if it's a valid URL or data URL
+          return url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:');
+        } catch {
+          return false;
+        }
+      });
+
+      if (validUrls.length === 0) {
+        return res.status(400).json({ 
+          message: "Unable to analyze images. Please upload images and try again." 
+        });
+      }
+
+      const hashtags = await analyzeImagesForHashtags(validUrls);
       res.json({ hashtags });
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return res.status(400).json({ message: fromZodError(error).message });
+        return res.status(400).json({ 
+          message: "Unable to analyze images. Please make sure images are uploaded correctly." 
+        });
       }
       console.error("Error analyzing images for hashtags:", error);
-      res.status(500).json({ message: "Failed to suggest hashtags" });
+      res.status(500).json({ 
+        message: "We couldn't generate hashtag suggestions at this time. You can add hashtags manually." 
+      });
     }
   });
 

@@ -281,13 +281,24 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
         method: "POST",
         body: JSON.stringify({ imageUrls: formData.images }),
       });
-      setSuggestedHashtags(response.hashtags || []);
-      setShowHashtagSuggestions(true);
+      
+      if (response.hashtags && response.hashtags.length > 0) {
+        setSuggestedHashtags(response.hashtags);
+        setShowHashtagSuggestions(true);
+        toast({
+          title: "Hashtags Suggested",
+          description: `AI suggested ${response.hashtags.length} hashtags based on your images`,
+        });
+      } else {
+        toast({
+          title: "No Suggestions",
+          description: "AI couldn't generate hashtag suggestions from your images. Try adding them manually.",
+        });
+      }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to get hashtag suggestions",
-        variant: "destructive",
+        title: "Suggestion Failed",
+        description: "We couldn't generate hashtag suggestions right now. You can add hashtags manually instead.",
       });
     } finally {
       setLoadingHashtags(false);

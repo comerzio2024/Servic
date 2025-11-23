@@ -159,40 +159,55 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
           </Link>
         </div>
         
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2">
           <div className="flex items-center text-amber-400">
             <Star className="w-4 h-4 fill-current" />
             <span className="ml-1 text-sm font-bold text-foreground">{service.rating}</span>
           </div>
           <span className="text-muted-foreground text-sm">({service.reviewCount} reviews)</span>
         </div>
-
-        <div className="flex items-center gap-3 pt-3 border-t border-border/50">
-          <img 
-            src={service.owner.profileImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${service.owner.id}`} 
-            alt={`${service.owner.firstName} ${service.owner.lastName}`} 
-            className="w-8 h-8 rounded-full ring-2 ring-background"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              <Link
-                href={`/users/${service.owner.id}`}
-                className="text-sm font-medium truncate hover:text-primary transition-colors"
-                data-testid={`link-user-${service.owner.id}`}
-              >
-                {service.owner.firstName} {service.owner.lastName}
-              </Link>
-              {service.owner.isVerified && (
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary fill-primary/10" />
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-lg font-bold text-primary">CHF {service.price}</span>
-            <span className="text-xs text-muted-foreground">/{service.priceUnit}</span>
-          </div>
-        </div>
       </CardContent>
+
+      {/* Pricing section - FULL WIDTH, separate line */}
+      <div className="flex items-center justify-between px-5 py-3 border-t border-border/50 bg-muted/30">
+        <div className="flex items-center gap-2">
+          {service.priceType === 'fixed' && (
+            <>
+              <span className="text-2xl font-bold text-primary">CHF {service.price}</span>
+              <span className="text-sm text-muted-foreground">/ {service.priceUnit}</span>
+            </>
+          )}
+          {service.priceType === 'text' && (
+            <span className="text-lg font-medium text-foreground">{service.priceText}</span>
+          )}
+          {service.priceType === 'list' && (
+            <span className="text-lg font-medium text-foreground">From CHF {(service.priceList as any)?.[0]?.price || 'N/A'}</span>
+          )}
+        </div>
+        <Badge variant="secondary">{service.priceType}</Badge>
+      </div>
+
+      {/* User section - FULL WIDTH, separate line */}
+      <div className="flex items-center gap-3 px-5 py-3">
+        <img 
+          src={service.owner.profileImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${service.owner.id}`} 
+          alt={`${service.owner.firstName} ${service.owner.lastName}`} 
+          className="w-10 h-10 rounded-full ring-2 ring-primary/20"
+        />
+        <div className="flex-1">
+          <Link
+            href={`/users/${service.owner.id}`}
+            className="text-sm font-semibold hover:text-primary transition-colors flex items-center gap-1"
+            data-testid={`link-user-${service.owner.id}`}
+          >
+            {service.owner.firstName} {service.owner.lastName}
+            {service.owner.isVerified && (
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+            )}
+          </Link>
+          <div className="text-xs text-muted-foreground">Service Provider</div>
+        </div>
+      </div>
       
       {!compact && (
         <CardFooter className="p-5 pt-0">

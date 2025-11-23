@@ -72,9 +72,9 @@ export default function Favorites() {
                 <div>
                   <h1 className="text-3xl font-bold text-slate-900">My Favorite Services</h1>
                   {favorites.length > 0 && (
-                    <p className="text-slate-600 mt-1">
+                    <div className="text-slate-600 mt-1">
                       You have <Badge variant="secondary" className="mx-1">{favorites.length}</Badge> favorite service{favorites.length !== 1 ? 's' : ''}
-                    </p>
+                    </div>
                   )}
                 </div>
               </div>
