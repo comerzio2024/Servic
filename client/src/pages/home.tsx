@@ -647,6 +647,110 @@ export default function Home() {
         </div>
       </section>
 
+      {searchLocation && (
+        <section className="py-12 container mx-auto px-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Navigation className="w-6 h-6 text-blue-500" />
+              Services Near You
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsNearbyExpanded(!isNearbyExpanded)}
+              className="h-8 px-2 hover:bg-slate-100 transition-colors"
+              data-testid="button-toggle-nearby"
+            >
+              {isNearbyExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Hide</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Show</span>
+                </>
+              )}
+            </Button>
+          </div>
+
+          <AnimatePresence>
+            {isNearbyExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-6">
+                  <div className="w-full md:w-48">
+                    <Label htmlFor="radius-select" className="text-sm font-medium mb-2 block">
+                      Search Radius
+                    </Label>
+                    <Select 
+                      value={radiusKm.toString()} 
+                      onValueChange={(value) => setRadiusKm(parseInt(value, 10))}
+                      disabled={!searchLocation}
+                    >
+                      <SelectTrigger id="radius-select" data-testid="select-radius">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 km</SelectItem>
+                        <SelectItem value="10">10 km</SelectItem>
+                        <SelectItem value="25">25 km</SelectItem>
+                        <SelectItem value="50">50 km</SelectItem>
+                        <SelectItem value="100">100 km</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {searchLocation && (
+                    <div className="mt-4 flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className="px-3 py-1" data-testid="badge-active-location">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {searchLocation.name}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearLocation}
+                        className="h-7 px-3"
+                        data-testid="button-change-location"
+                      >
+                        Change Location
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {searchLocation && (
+                  <div className="space-y-6">
+                    <ServiceMapToggle 
+                      services={nearbyServices}
+                      userLocation={searchLocation}
+                      maxServices={5}
+                      defaultExpanded={false}
+                    />
+                    
+                    <ServiceResultsRail
+                      services={nearbyServices}
+                      isLoading={nearbyLoading}
+                      emptyMessage={`No services found within ${radiusKm} km`}
+                      emptyDescription="Try increasing the search radius to discover more services"
+                      isExpanded={isNearbyExpanded}
+                      onExpandChange={setIsNearbyExpanded}
+                      dataTestIdPrefix="nearby"
+                    />
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      )}
 
       {isAuthenticated && !searchLocation && (
         <section className="py-12 container mx-auto px-4 bg-slate-50">
