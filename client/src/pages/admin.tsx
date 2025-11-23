@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { AddressMultiInput } from "@/components/address-multi-input";
 import { Shield, Users, FileText, CreditCard, CheckCircle, XCircle, Trash2, Brain, Send, Loader2, Sparkles, BarChart3, Settings, Eye, EyeOff, History, AlertCircle, Plus, Edit, MoreVertical, ChevronDown, ChevronUp, Folder } from "lucide-react";
 import type { User, Service, Plan, SubmittedCategory, Category } from "@shared/schema";
 
@@ -966,16 +967,11 @@ function ServicesManagement() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="edit-locations">Locations (comma-separated)</Label>
-                <Input
-                  id="edit-locations"
-                  value={editForm.locations}
-                  onChange={(e) => setEditForm({ ...editForm, locations: e.target.value })}
-                  placeholder="Zurich, Bern, Basel"
-                  data-testid="input-edit-service-locations"
-                />
-              </div>
+              <AddressMultiInput
+                label="Service Locations"
+                initialAddresses={editForm.locations.split(",").map(l => l.trim()).filter(l => l)}
+                onAddressesChange={(addresses) => setEditForm({ ...editForm, locations: addresses.join(", ") })}
+              />
 
               <div>
                 <Label htmlFor="edit-tags">Tags (comma-separated)</Label>

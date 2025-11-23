@@ -8,6 +8,19 @@ ServeMkt is a full-stack service marketplace application that connects service p
 
 Preferred communication style: Simple, everyday language.
 
+## Critical Requirements
+
+**⚠️ LOCATION FIELDS MUST HAVE GEOLOCATION VERIFICATION**
+- **Every single location field** in the application must have:
+  - Address autocomplete dropdown with geolocation search
+  - Address verification through Nominatim API (OpenStreetMap)
+  - Display of verified address components (street, city, postal code, canton)
+  - Verified badge indicator
+  - Uses `/api/geocode/search` endpoint
+- **Implementation**: Use `AddressAutocomplete` component for single locations or `AddressMultiInput` for multiple locations
+- **Check this requirement EVERY TIME working on location fields** - this is non-negotiable
+- Examples of location fields that need this: service locations, user preferred locations, admin editing location fields
+
 ## System Architecture
 
 ### Frontend Architecture
