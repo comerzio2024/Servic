@@ -1765,6 +1765,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Review management routes
+  app.get('/api/users/me/reviews-received', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { reviews: reviewsTable, services: servicesTable, users: usersTable } = require("@shared/schema");
+      
+      // Get all reviews for services owned by this user
+      const receivedReviews = await db
+        .select({
+          id: reviews.id,
+          rating: reviews.rating,
+          comment: reviews.comment,
+          editCount: reviews.editCount,
+          lastEditedAt: reviews.lastEditedAt,
+          createdAt: reviews.createdAt,
+          reviewer: {
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+          },
+          service: {
+            id: services.id,
+            title: services.title,
+          },
+        })
+        .from(reviews)
+        .innerJoin(users, eq(reviews.userId, users.id))
+        .innerJoin(services, eq(reviews.serviceId, services.id))
+        .where(eq(services.ownerId, userId));
+
+      res.json(receivedReviews);
+    } catch (error) {
+      console.error("Error fetching received reviews:", error);
+      res.status(500).json({ message: "Failed to fetch received reviews" });
+    }
+  });
+
+  app.patch('/api/reviews/:reviewId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const reviewId = req.params.reviewId;
+      const { rating, comment } = req.body;
+
+      // Get the review
+      const reviewData = await db.select().from(reviews).where(eq(reviews.id, reviewId));
+      if (reviewData.length === 0) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      const review = reviewData[0];
+
+      // Check if user is the reviewer
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to edit this review" });
+      }
+
+      // Check 7-day constraint
+      const createdDate = new Date(review.createdAt);
+      const now = new Date();
+      const daysDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 7) {
+        return res.status(400).json({ message: "Reviews can only be edited within 7 days of creation" });
+      }
+
+      // Check edit count constraint
+      if ((review.editCount || 0) >= 2) {
+        return res.status(400).json({ message: "Reviews can be edited maximum 2 times" });
+      }
+
+      // Update review
+      await db.update(reviews)
+        .set({
+          rating: rating !== undefined ? rating : review.rating,
+          comment: comment !== undefined ? comment : review.comment,
+          editCount: (review.editCount || 0) + 1,
+          lastEditedAt: new Date(),
+        })
+        .where(eq(reviews.id, reviewId));
+
+      const updated = await db.select().from(reviews).where(eq(reviews.id, reviewId));
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error updating review:", error);
+      res.status(500).json({ message: "Failed to update review" });
+    }
+  });
+
+  app.delete('/api/reviews/:reviewId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const reviewId = req.params.reviewId;
+
+      // Get the review
+      const reviewData = await db.select().from(reviews).where(eq(reviews.id, reviewId));
+      if (reviewData.length === 0) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      const review = reviewData[0];
+
+      // Check if user is the reviewer
+      if (review.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to delete this review" });
+      }
+
+      // Delete review
+      await db.delete(reviews).where(eq(reviews.id, reviewId));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      res.status(500).json({ message: "Failed to delete review" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -347,6 +347,8 @@ export const reviews = pgTable("reviews", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   rating: integer("rating").notNull(),
   comment: text("comment").notNull(),
+  editCount: integer("edit_count").default(0).notNull(),
+  lastEditedAt: timestamp("last_edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_reviews_service").on(table.serviceId),

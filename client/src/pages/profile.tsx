@@ -92,6 +92,12 @@ export default function Profile() {
     enabled: isAuthenticated,
   });
 
+  const { data: receivedReviews = [] } = useQuery<Array<any>>({
+    queryKey: ["/api/users/me/reviews-received"],
+    queryFn: () => apiRequest("/api/users/me/reviews-received"),
+    enabled: isAuthenticated,
+  });
+
   const updateServiceMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Service> }) =>
       apiRequest(`/api/services/${id}`, {
@@ -513,6 +519,7 @@ export default function Profile() {
             <TabsList className="mb-6 bg-white p-1 border border-border">
               <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
               <TabsTrigger value="services" data-testid="tab-my-services">My Services</TabsTrigger>
+              <TabsTrigger value="reviews" data-testid="tab-reviews">Reviews ({receivedReviews.length})</TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings">Settings</TabsTrigger>
               <TabsTrigger value="account" data-testid="tab-account">Account</TabsTrigger>
             </TabsList>
@@ -754,6 +761,64 @@ export default function Profile() {
                    </div>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="reviews" data-testid="panel-reviews" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reviews Received</CardTitle>
+                  <CardDescription>See who has reviewed your services</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {receivedReviews.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">No reviews yet. Keep providing excellent service!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {receivedReviews.map((review: any) => (
+                        <div key={review.id} className="border rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={review.reviewer.profileImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.reviewer.id}`}
+                                alt={review.reviewer.firstName}
+                                className="w-10 h-10 rounded-full"
+                              />
+                              <div>
+                                <p className="font-medium">{review.reviewer.firstName} {review.reviewer.lastName}</p>
+                                <p className="text-xs text-muted-foreground">On: {review.service.title}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {Array(review.rating).fill(0).map((_, i) => (
+                                <span key={i} className="text-yellow-400">★</span>
+                              ))}
+                              {Array(5 - review.rating).fill(0).map((_, i) => (
+                                <span key={`empty-${i}`} className="text-gray-300">★</span>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm mb-3">{review.comment}</p>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{new Date(review.createdAt).toLocaleDateString()}</span>
+                            {review.editCount > 0 && <span>Edited {review.editCount}x</span>}
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-3 w-full"
+                            onClick={() => setLocation(`/profile?tab=profile&reviewBack=${review.reviewer.id}`)}
+                            data-testid={`button-review-back-${review.id}`}
+                          >
+                            Review Back
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="settings" data-testid="panel-settings" className="space-y-6">
