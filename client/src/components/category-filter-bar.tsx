@@ -1,9 +1,11 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import type { CategoryWithTemporary } from "@/lib/api";
+import { useState } from "react";
 
 interface CategoryFilterBarProps {
   categories: CategoryWithTemporary[];
@@ -20,11 +22,45 @@ export function CategoryFilterBar({
   serviceCount = 0,
   categoryCounts = {},
 }: CategoryFilterBarProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   return (
     <div className="w-full bg-white border-b sticky top-16 z-40 shadow-sm">
-      <div className="container mx-auto px-4 py-4">
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex gap-2 pb-2">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-slate-700">Categories</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="h-7 px-2 hover:bg-slate-100 transition-colors"
+            data-testid="button-toggle-categories"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="w-4 h-4 mr-1" />
+                <span className="text-xs">Hide</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 mr-1" />
+                <span className="text-xs">Show</span>
+              </>
+            )}
+          </Button>
+        </div>
+        
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex gap-2 pb-2">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -73,9 +109,12 @@ export function CategoryFilterBar({
                 </Badge>
               </motion.button>
             ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

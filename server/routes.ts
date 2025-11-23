@@ -1204,6 +1204,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/ai/generate-description-simple', isAuthenticated, async (req: any, res) => {
+    try {
+      const { generateSimpleServiceDescription } = await import("./aiService.js");
+      const schema = z.object({
+        title: z.string().min(1, "Title is required"),
+        categoryName: z.string().optional(),
+      });
+
+      const validated = schema.parse(req.body);
+      const description = await generateSimpleServiceDescription(
+        validated.title,
+        validated.categoryName
+      );
+      res.json({ description });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      console.error("Error generating service description:", error);
+      res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
   app.post('/api/ai/suggest-pricing', isAuthenticated, async (req: any, res) => {
     try {
       const schema = z.object({

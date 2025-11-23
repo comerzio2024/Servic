@@ -50,7 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               ) : isAuthenticated && user ? (
                 <>
                   <Link href="/profile">
-                    <Button variant="ghost" className="gap-2" data-testid="link-profile">
+                    <Button variant="ghost" className="gap-2 hover:bg-slate-100 transition-colors cursor-pointer" data-testid="link-profile">
                       Profile
                     </Button>
                   </Link>
@@ -64,11 +64,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full">
+                      <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 transition-colors cursor-pointer">
                         <img 
                           src={user.profileImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} 
                           alt="User" 
-                          className="w-8 h-8 rounded-full border border-border"
+                          className="w-8 h-8 rounded-full border border-border hover:ring-2 hover:ring-primary/20 transition-all"
                         />
                       </Button>
                     </DropdownMenuTrigger>

@@ -54,6 +54,7 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
   const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
   const [loadingHashtags, setLoadingHashtags] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
 
   const maxImages = user?.plan?.maxImages || 4;
 
@@ -96,41 +97,42 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
     contextActions.updateFormProgress("hasPrice", hasPrice);
   }, [formData.title, formData.description, formData.categoryId, formData.images.length, formData.locations, formData.contacts, formData.price, formData.priceText, formData.priceList, formData.priceType, open]);
 
-  // Initialize contacts with user's profile data
+  // Initialize contacts with user's profile data (only once when modal opens with empty form)
   useEffect(() => {
-    if (user && formData.contacts.length === 0) {
-      const initialContacts: Contact[] = [];
-      
-      if (user.phoneNumber) {
-        initialContacts.push({
-          contactType: "phone",
-          value: user.phoneNumber,
-          name: `${user.firstName} ${user.lastName}`.trim() || undefined,
-          isPrimary: true,
-          isVerified: user.phoneVerified,
-        });
-      }
-      
-      if (user.email) {
-        initialContacts.push({
-          contactType: "email",
-          value: user.email,
-          isPrimary: initialContacts.length === 0,
-          isVerified: user.emailVerified,
-        });
-      }
-      
-      if (initialContacts.length === 0) {
-        initialContacts.push({
-          contactType: "email",
-          value: "",
-          isPrimary: true,
-        });
-      }
-      
-      setFormData(prev => ({ ...prev, contacts: initialContacts }));
+    if (!user || !open || formData.contacts.length > 0) return;
+    
+    // Only initialize when there are no contacts at all (fresh form)
+    const initialContacts: Contact[] = [];
+    
+    if (user.phoneNumber) {
+      initialContacts.push({
+        contactType: "phone",
+        value: user.phoneNumber,
+        name: `${user.firstName} ${user.lastName}`.trim() || undefined,
+        isPrimary: true,
+        isVerified: user.phoneVerified,
+      });
     }
-  }, [user]);
+    
+    if (user.email) {
+      initialContacts.push({
+        contactType: "email",
+        value: user.email,
+        isPrimary: initialContacts.length === 0,
+        isVerified: user.emailVerified,
+      });
+    }
+    
+    if (initialContacts.length === 0) {
+      initialContacts.push({
+        contactType: "email",
+        value: "",
+        isPrimary: true,
+      });
+    }
+    
+    setFormData(prev => ({ ...prev, contacts: initialContacts }));
+  }, [user, open, formData.contacts.length]);
 
   const createServiceMutation = useMutation({
     mutationFn: async ({ data, status }: { data: typeof formData; status: "draft" | "active" }) => {
@@ -327,6 +329,45 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
     addHashtag(tag);
   };
 
+  const handleGenerateDescription = async () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Title Required",
+        description: "Please enter a service title first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingDescription(true);
+    try {
+      const categoryName = categories.find(c => c.id === formData.categoryId)?.name;
+      const response = await apiRequest("/api/ai/generate-description-simple", {
+        method: "POST",
+        body: JSON.stringify({ 
+          title: formData.title,
+          categoryName
+        }),
+      });
+      
+      if (response.description) {
+        setFormData(prev => ({ ...prev, description: response.description }));
+        toast({
+          title: "Description Generated",
+          description: "AI has generated a description based on your title. Feel free to edit it!",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Couldn't generate description. Please write it manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
   const validateAddresses = async (): Promise<boolean> => {
     const validLocations = formData.locations.filter(l => l.trim());
     if (validLocations.length === 0) return false;
@@ -424,11 +465,11 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs defaultValue="basic" className="w-full">
+          <Tabs defaultValue="media" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="media">Images & Contacts</TabsTrigger>
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="pricing">Pricing & Location</TabsTrigger>
-              <TabsTrigger value="media">Images & Contacts</TabsTrigger>
             </TabsList>
 
             {/* Basic Info Tab */}
@@ -445,15 +486,34 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="description">Description *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={!formData.title.trim() || generatingDescription}
+                    className="gap-2"
+                    data-testid="button-ai-generate-description"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {generatingDescription ? "Generating..." : "AI Generate"}
+                  </Button>
+                </div>
                 <Textarea
                   id="description"
-                  placeholder="Describe your service in detail..."
+                  placeholder="Describe your service in detail... or click 'AI Generate' for suggestions"
                   rows={5}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   data-testid="textarea-service-description"
                 />
+                {!formData.title.trim() && (
+                  <p className="text-xs text-muted-foreground">
+                    Enter a title first to generate AI description
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

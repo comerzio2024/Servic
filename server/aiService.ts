@@ -58,3 +58,48 @@ Respond with JSON in this format: { "categorySlug": string, "confidence": number
     };
   }
 }
+
+export async function generateSimpleServiceDescription(
+  title: string,
+  categoryName?: string
+): Promise<string> {
+  try {
+    const categoryHint = categoryName ? ` in the ${categoryName} category` : "";
+    const prompt = `Generate a professional, compelling service description for a Swiss marketplace listing${categoryHint}.
+
+Service Title: ${title}
+
+Requirements:
+- Write 3-4 paragraphs (150-200 words total)
+- Use professional but friendly tone
+- Highlight key benefits and value proposition
+- Include what makes this service unique
+- Mention Swiss quality standards if relevant
+- Write in clear, concise sentences
+- Do NOT include pricing information
+- Do NOT use marketing fluff or excessive adjectives
+
+Return ONLY the description text, no additional commentary.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional copywriter specializing in service marketplace listings. You write clear, compelling descriptions that convert browsers into customers.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    return response.choices[0].message.content?.trim() || "";
+  } catch (error) {
+    console.error("AI description generation failed:", error);
+    throw new Error("Failed to generate description");
+  }
+}

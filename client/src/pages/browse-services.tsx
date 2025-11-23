@@ -37,6 +37,7 @@ export default function BrowseServices() {
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     searchParams.get("categories")?.split(",").filter(Boolean) || []
   );
@@ -45,6 +46,7 @@ export default function BrowseServices() {
   const [priceMinDrag, setPriceMinDrag] = useState(Number(searchParams.get("priceMin")) || 0);
   const [priceMaxDrag, setPriceMaxDrag] = useState(Number(searchParams.get("priceMax")) || 1000);
   const [locationFilter, setLocationFilter] = useState(searchParams.get("location") || "");
+  const [locationInput, setLocationInput] = useState(searchParams.get("location") || "");
   const [sortBy, setSortBy] = useState<SortOption>((searchParams.get("sort") as SortOption) || "newest");
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1);
   const itemsPerPage = 12;
@@ -170,10 +172,14 @@ export default function BrowseServices() {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
+    setSearchInput("");
     setSelectedCategories([]);
     setPriceMin(0);
     setPriceMax(1000);
+    setPriceMinDrag(0);
+    setPriceMaxDrag(1000);
     setLocationFilter("");
+    setLocationInput("");
     setSortBy("newest");
     setCurrentPage(1);
   };
@@ -215,12 +221,22 @@ export default function BrowseServices() {
           <Input
             id="search-input"
             placeholder="Search services..."
-            value={searchQuery}
+            value={searchInput}
             onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
+              setSearchInput(e.target.value);
             }}
-            onBlur={() => {}}
+            onBlur={() => {
+              if (searchInput !== searchQuery) {
+                setSearchQuery(searchInput);
+                setCurrentPage(1);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearchQuery(searchInput);
+                setCurrentPage(1);
+              }
+            }}
             className="pl-9"
             data-testid="input-search"
           />
@@ -316,6 +332,8 @@ export default function BrowseServices() {
               onValueCommit={([min, max]) => {
                 setPriceMin(min);
                 setPriceMax(max);
+                setPriceMinDrag(min);
+                setPriceMaxDrag(max);
                 setCurrentPage(1);
               }}
               className="w-full"
@@ -337,10 +355,21 @@ export default function BrowseServices() {
         <Input
           id="location-input"
           placeholder="City or canton..."
-          value={locationFilter}
+          value={locationInput}
           onChange={(e) => {
-            setLocationFilter(e.target.value);
-            setCurrentPage(1);
+            setLocationInput(e.target.value);
+          }}
+          onBlur={() => {
+            if (locationInput !== locationFilter) {
+              setLocationFilter(locationInput);
+              setCurrentPage(1);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              setLocationFilter(locationInput);
+              setCurrentPage(1);
+            }
           }}
           data-testid="input-location"
         />

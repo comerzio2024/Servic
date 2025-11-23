@@ -16,13 +16,14 @@ import { useState, useEffect } from "react";
 interface ServiceCardProps {
   service: ServiceWithDetails & { distance?: number };
   compact?: boolean;
+  isFavorited?: boolean;
 }
 
-export function ServiceCard({ service, compact = false }: ServiceCardProps) {
+export function ServiceCard({ service, compact = false, isFavorited: initialIsFavorited }: ServiceCardProps) {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(initialIsFavorited ?? false);
   const [showUnfavoriteDialog, setShowUnfavoriteDialog] = useState(false);
   const daysRemaining = Math.ceil((new Date(service.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   const isExpired = daysRemaining <= 0;
@@ -36,19 +37,21 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
   // Generate cropped thumbnail using canvas rendering
   const displayImage = useCroppedImage(mainImage, mainImageMetadata);
 
-  // Query favorite status
+  // Query favorite status only if not provided
   const { data: favoriteStatus } = useQuery({
     queryKey: ["/api/favorites", service.id, "status"],
     queryFn: () => apiRequest<{ isFavorite: boolean }>(`/api/favorites/${service.id}/status`),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && initialIsFavorited === undefined,
   });
 
-  // Update local state when favorite status is fetched
+  // Update local state when favorite status is fetched or prop changes
   useEffect(() => {
-    if (favoriteStatus?.isFavorite !== undefined) {
+    if (initialIsFavorited !== undefined) {
+      setIsFavorited(initialIsFavorited);
+    } else if (favoriteStatus?.isFavorite !== undefined) {
       setIsFavorited(favoriteStatus.isFavorite);
     }
-  }, [favoriteStatus]);
+  }, [favoriteStatus, initialIsFavorited]);
 
   // Toggle favorite mutation
   const toggleFavorite = useMutation({
@@ -182,23 +185,23 @@ export function ServiceCard({ service, compact = false }: ServiceCardProps) {
         </div>
       </CardContent>
 
-      {/* Pricing section - FULL WIDTH, separate line */}
+      {/* Pricing section - FULL WIDTH, separate line with responsive font sizing */}
       <div className="flex items-center justify-between px-3 sm:px-4 md:px-5 py-3 border-t border-border/50 bg-muted/30">
         <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
           {service.priceType === 'fixed' && (
             <>
-              <span className="text-xl sm:text-2xl font-bold text-primary">CHF {service.price}</span>
-              <span className="text-xs sm:text-sm text-muted-foreground">/{service.priceUnit}</span>
+              <span className="text-base sm:text-xl md:text-2xl lg:text-2xl font-bold text-primary" style={{ fontSize: 'clamp(1rem, 2vw + 0.5rem, 1.5rem)' }}>CHF {service.price}</span>
+              <span className="text-xs sm:text-sm md:text-base text-muted-foreground">/{service.priceUnit}</span>
             </>
           )}
           {service.priceType === 'text' && (
-            <span className="text-sm sm:text-base font-medium text-foreground line-clamp-1">{service.priceText}</span>
+            <span className="text-sm sm:text-base md:text-lg font-medium text-foreground line-clamp-1">{service.priceText}</span>
           )}
           {service.priceType === 'list' && (
-            <span className="text-sm sm:text-base font-medium text-foreground">From CHF {(service.priceList as any)?.[0]?.price || 'N/A'}</span>
+            <span className="text-sm sm:text-base md:text-lg font-medium text-foreground">From CHF {(service.priceList as any)?.[0]?.price || 'N/A'}</span>
           )}
         </div>
-        <Badge variant="secondary" className="text-xs sm:text-sm shrink-0">{service.priceType}</Badge>
+        <Badge variant="secondary" className="text-[10px] sm:text-xs md:text-sm shrink-0">{service.priceType}</Badge>
       </div>
 
       {/* User section - FULL WIDTH, separate line */}

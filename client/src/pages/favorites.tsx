@@ -104,7 +104,7 @@ export default function Favorites() {
                   transition={{ duration: 0.4, delay: index * 0.05 }}
                   data-testid={`favorite-service-${fav.service.id}`}
                 >
-                  <ServiceCard service={fav.service} />
+                  <ServiceCard service={fav.service} isFavorited={true} />
                 </motion.div>
               ))}
             </div>
