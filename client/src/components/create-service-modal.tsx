@@ -131,7 +131,7 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
   }, [user]);
 
   const createServiceMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async ({ data, status }: { data: typeof formData; status: "draft" | "active" }) => {
       // First create the service
       const service = await apiRequest("/api/services", {
         method: "POST",
@@ -148,7 +148,7 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
           images: data.images,
           imageMetadata: data.imageMetadata,
           mainImageIndex: data.mainImageIndex,
-          status: "active",
+          status: status,
           hashtags: data.hashtags,
           // Keep old fields for backward compatibility
           contactPhone: data.contacts.find(c => c.contactType === "phone")?.value || "",
@@ -172,13 +172,13 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
         }
       }
 
-      return service;
+      return { service, status };
     },
-    onSuccess: () => {
+    onSuccess: ({ status }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/services"] });
       toast({
-        title: "Service Posted!",
-        description: "Your service has been posted successfully.",
+        title: status === "draft" ? "Draft Saved!" : "Service Posted!",
+        description: status === "draft" ? "Your service has been saved as a draft." : "Your service has been posted successfully.",
       });
       resetForm();
       onOpenChange(false);
@@ -400,17 +400,24 @@ export function CreateServiceModal({ open, onOpenChange, onSuggestCategory }: Cr
       return;
     }
 
-    createServiceMutation.mutate({ ...formData, locations: validLocations });
+    createServiceMutation.mutate({ data: { ...formData, locations: validLocations }, status: "active" });
   };
 
-  const handleSaveDraft = () => {
-    localStorage.setItem("serviceDraft", JSON.stringify(formData));
-    setDraftSaved(true);
-    toast({
-      title: "Draft Saved",
-      description: "Your service draft has been saved locally.",
-    });
-    setTimeout(() => setDraftSaved(false), 3000);
+  const handleSaveDraft = async () => {
+    const validLocations = formData.locations.filter((l) => l.trim());
+    const validContacts = formData.contacts.filter((c) => c.value.trim());
+
+    // Basic validation for draft - only require title
+    if (!formData.title) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide at least a title for your draft",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createServiceMutation.mutate({ data: { ...formData, locations: validLocations }, status: "draft" });
   };
 
   const verificationEnabled = settings?.requireEmailVerification || settings?.requirePhoneVerification;

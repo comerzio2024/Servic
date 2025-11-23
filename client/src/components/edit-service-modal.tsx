@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,7 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
   const [showHashtagSuggestions, setShowHashtagSuggestions] = useState(false);
   const [suggestedHashtags, setSuggestedHashtags] = useState<string[]>([]);
   const [loadingHashtags, setLoadingHashtags] = useState(false);
+  const initializedRef = useRef(false);
 
   const maxImages = user?.plan?.maxImages || 4;
 
@@ -50,7 +51,7 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
   });
 
   useEffect(() => {
-    if (service && open) {
+    if (service && open && !initializedRef.current) {
       // Map existing contacts to Contact format
       const mappedContacts: Contact[] = existingContacts.map(c => ({
         id: c.id,
@@ -95,6 +96,13 @@ export function EditServiceModal({ open, onOpenChange, service }: EditServiceMod
         mainImageIndex: service.mainImageIndex || 0,
         hashtags: service.hashtags || [],
       });
+      
+      initializedRef.current = true;
+    }
+    
+    // Reset when modal closes
+    if (!open) {
+      initializedRef.current = false;
     }
   }, [service, open, existingContacts]);
 
