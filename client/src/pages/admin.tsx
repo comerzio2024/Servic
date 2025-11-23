@@ -620,13 +620,27 @@ function ServicesManagement() {
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
+    categoryId: "",
+    priceType: "fixed" as "fixed" | "list" | "text",
     price: "",
+    priceText: "",
+    priceUnit: "job" as "hour" | "job" | "consultation" | "day" | "month",
+    locations: "" as string,
+    tags: "" as string,
+    hashtags: "" as string,
+    contactPhone: "",
+    contactEmail: "",
     status: "active",
   });
 
   const { data: services = [], isLoading } = useQuery<Service[]>({
     queryKey: ["/api/admin/services"],
     queryFn: () => apiRequest("/api/admin/services"),
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+    queryFn: () => apiRequest("/api/categories"),
   });
 
   const deleteServiceMutation = useMutation({
@@ -672,7 +686,16 @@ function ServicesManagement() {
     setEditForm({
       title: "",
       description: "",
+      categoryId: "",
+      priceType: "fixed",
       price: "",
+      priceText: "",
+      priceUnit: "job",
+      locations: "",
+      tags: "",
+      hashtags: "",
+      contactPhone: "",
+      contactEmail: "",
       status: "active",
     });
   };
@@ -682,7 +705,16 @@ function ServicesManagement() {
     setEditForm({
       title: service.title,
       description: service.description,
+      categoryId: service.categoryId,
+      priceType: service.priceType || "fixed",
       price: service.price?.toString() || "",
+      priceText: service.priceText || "",
+      priceUnit: service.priceUnit || "job",
+      locations: (service.locations || []).join(", "),
+      tags: (service.tags || []).join(", "),
+      hashtags: (service.hashtags || []).join(", "),
+      contactPhone: service.contactPhone || "",
+      contactEmail: service.contactEmail || "",
       status: service.status,
     });
   };
@@ -693,8 +725,27 @@ function ServicesManagement() {
     const updateData: any = {};
     if (editForm.title !== editService.title) updateData.title = editForm.title;
     if (editForm.description !== editService.description) updateData.description = editForm.description;
-    if (editForm.price !== editService.price?.toString()) updateData.price = parseFloat(editForm.price) || null;
+    if (editForm.categoryId !== editService.categoryId) updateData.categoryId = editForm.categoryId;
+    if (editForm.priceType !== editService.priceType) updateData.priceType = editForm.priceType;
+    if (editForm.priceUnit !== editService.priceUnit) updateData.priceUnit = editForm.priceUnit;
+    if (editForm.contactPhone !== editService.contactPhone) updateData.contactPhone = editForm.contactPhone;
+    if (editForm.contactEmail !== editService.contactEmail) updateData.contactEmail = editForm.contactEmail;
     if (editForm.status !== editService.status) updateData.status = editForm.status;
+    
+    if (editForm.priceType === "fixed" && editForm.price !== editService.price?.toString()) {
+      updateData.price = parseFloat(editForm.price) || null;
+    }
+    if (editForm.priceType === "text" && editForm.priceText !== editService.priceText) {
+      updateData.priceText = editForm.priceText;
+    }
+    
+    const locationsArray = editForm.locations.split(",").map(l => l.trim()).filter(l => l);
+    const tagsArray = editForm.tags.split(",").map(t => t.trim()).filter(t => t);
+    const hashtagsArray = editForm.hashtags.split(",").map(h => h.trim()).filter(h => h);
+    
+    if (JSON.stringify(locationsArray) !== JSON.stringify(editService.locations)) updateData.locations = locationsArray;
+    if (JSON.stringify(tagsArray) !== JSON.stringify(editService.tags)) updateData.tags = tagsArray;
+    if (JSON.stringify(hashtagsArray) !== JSON.stringify(editService.hashtags)) updateData.hashtags = hashtagsArray;
     
     if (Object.keys(updateData).length === 0) {
       toast({
@@ -772,59 +823,185 @@ function ServicesManagement() {
       </CardContent>
 
       <Dialog open={!!editService} onOpenChange={() => setEditService(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Service</DialogTitle>
-            <DialogDescription>Edit the service details for {editService?.title}</DialogDescription>
+            <DialogDescription>Edit all details for {editService?.title}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Title</Label>
-              <Input
-                id="edit-title"
-                value={editForm.title}
-                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                data-testid="input-edit-service-title"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                rows={4}
-                data-testid="input-edit-service-description"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <ScrollArea className="w-full">
+            <div className="space-y-4 pr-4">
               <div>
-                <Label htmlFor="edit-price">Price (CHF)</Label>
+                <Label htmlFor="edit-title">Title *</Label>
                 <Input
-                  id="edit-price"
-                  type="number"
-                  step="0.01"
-                  value={editForm.price}
-                  onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                  data-testid="input-edit-service-price"
+                  id="edit-title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  data-testid="input-edit-service-title"
                 />
               </div>
+
               <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
-                  <SelectTrigger id="edit-status" data-testid="select-edit-service-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-description">Description *</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={4}
+                  data-testid="input-edit-service-description"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-category">Category *</Label>
+                  <Select value={editForm.categoryId} onValueChange={(value) => setEditForm({ ...editForm, categoryId: value })}>
+                    <SelectTrigger id="edit-category" data-testid="select-edit-service-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-status">Status *</Label>
+                  <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
+                    <SelectTrigger id="edit-status" data-testid="select-edit-service-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-price-type">Pricing Type *</Label>
+                  <Select value={editForm.priceType} onValueChange={(value: any) => setEditForm({ ...editForm, priceType: value })}>
+                    <SelectTrigger id="edit-price-type" data-testid="select-edit-service-price-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
+                      <SelectItem value="text">Text Price</SelectItem>
+                      <SelectItem value="list">Price List</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-price-unit">Price Unit *</Label>
+                  <Select value={editForm.priceUnit} onValueChange={(value: any) => setEditForm({ ...editForm, priceUnit: value })}>
+                    <SelectTrigger id="edit-price-unit" data-testid="select-edit-service-price-unit">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hour">Hour</SelectItem>
+                      <SelectItem value="job">Job</SelectItem>
+                      <SelectItem value="consultation">Consultation</SelectItem>
+                      <SelectItem value="day">Day</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editForm.priceType === "fixed" && (
+                <div>
+                  <Label htmlFor="edit-price">Price (CHF)</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    step="0.01"
+                    value={editForm.price}
+                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                    data-testid="input-edit-service-price"
+                  />
+                </div>
+              )}
+
+              {editForm.priceType === "text" && (
+                <div>
+                  <Label htmlFor="edit-price-text">Price Text</Label>
+                  <Input
+                    id="edit-price-text"
+                    value={editForm.priceText}
+                    onChange={(e) => setEditForm({ ...editForm, priceText: e.target.value })}
+                    placeholder="e.g., Upon request"
+                    data-testid="input-edit-service-price-text"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-contact-phone">Contact Phone *</Label>
+                  <Input
+                    id="edit-contact-phone"
+                    value={editForm.contactPhone}
+                    onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })}
+                    data-testid="input-edit-service-contact-phone"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-contact-email">Contact Email *</Label>
+                  <Input
+                    id="edit-contact-email"
+                    type="email"
+                    value={editForm.contactEmail}
+                    onChange={(e) => setEditForm({ ...editForm, contactEmail: e.target.value })}
+                    data-testid="input-edit-service-contact-email"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-locations">Locations (comma-separated)</Label>
+                <Input
+                  id="edit-locations"
+                  value={editForm.locations}
+                  onChange={(e) => setEditForm({ ...editForm, locations: e.target.value })}
+                  placeholder="Zurich, Bern, Basel"
+                  data-testid="input-edit-service-locations"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
+                <Input
+                  id="edit-tags"
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  placeholder="professional, experienced, certified"
+                  data-testid="input-edit-service-tags"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-hashtags">Hashtags (comma-separated, max 3)</Label>
+                <Input
+                  id="edit-hashtags"
+                  value={editForm.hashtags}
+                  onChange={(e) => setEditForm({ ...editForm, hashtags: e.target.value })}
+                  placeholder="#design #creative #professional"
+                  data-testid="input-edit-service-hashtags"
+                />
               </div>
             </div>
-          </div>
-          <DialogFooter>
+          </ScrollArea>
+
+          <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setEditService(null)} data-testid="button-cancel-edit-service">
               Cancel
             </Button>
