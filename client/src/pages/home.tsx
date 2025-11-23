@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
@@ -34,10 +34,23 @@ export default function Home() {
   const [hasSearchedLocation, setHasSearchedLocation] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<Array<{lat: number; lng: number; displayName: string; name: string}>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
+
+  // Auto-load user's saved location on mount
+  useEffect(() => {
+    if (isAuthenticated && user && user.locationLat && user.locationLng && !customLocation) {
+      setCustomLocation({
+        lat: parseFloat(user.locationLat as any),
+        lng: parseFloat(user.locationLng as any),
+        name: user.preferredLocationName || "Your Location"
+      });
+      setHasSearchedLocation(true);
+    }
+  }, [isAuthenticated, user, customLocation]);
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<CategoryWithTemporary[]>({
     queryKey: ["/api/categories"],
@@ -173,6 +186,7 @@ export default function Home() {
     setCustomLocation(null);
     setLocationSearchQuery("");
     setAddressSuggestions([]);
+    setHasSearchedLocation(false);
   };
 
   const activeLocation = customLocation || userLocation;
@@ -417,14 +431,13 @@ export default function Home() {
                   {customLocation.name}
                 </Badge>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={handleClearLocation}
-                  className="h-7 px-2"
-                  data-testid="button-clear-location"
+                  className="h-7 px-3"
+                  data-testid="button-change-location"
                 >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
+                  Change Location
                 </Button>
               </div>
             )}
@@ -488,7 +501,7 @@ export default function Home() {
           <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold text-center mb-2">Find Services Near You</h2>
             <p className="text-center text-slate-600 mb-6">
-              Search for a location to discover services in your area
+              Enter a location to discover services in your area
             </p>
             <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
               <div className="relative">
