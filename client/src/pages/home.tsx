@@ -575,7 +575,7 @@ export default function Home() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              Your Favorites
+              Your Saved Listings
               <Badge variant="secondary" className="ml-2">{favorites.length}</Badge>
             </h2>
             <div className="flex items-center gap-2">
