@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout";
 import { ServiceCard } from "@/components/service-card";
 import { GoogleMaps } from "@/components/google-maps";
 import { StickyCategoryBar } from "@/components/sticky-category-bar";
+import { CategoryFilterBar } from "@/components/category-filter-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1007,6 +1008,14 @@ export default function Home() {
             <TabsContent value="saved" className="mt-0">
               {isAuthenticated ? (
                 <>
+                  <CategoryFilterBar
+                    categories={categories}
+                    selectedCategory={savedListingsCategory}
+                    onCategoryChange={setSavedListingsCategory}
+                    serviceCount={favorites.length}
+                    categoryCounts={savedListingsCategoryCounts}
+                  />
+
                   <div className="bg-white border-b shadow-sm">
                     <div className="container mx-auto px-4 py-3">
                       <div className="flex items-center justify-between">
@@ -1026,19 +1035,6 @@ export default function Home() {
                               <SelectItem value="price-high">Price: High to Low</SelectItem>
                             </SelectContent>
                           </Select>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          {savedListingsCategory && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setSavedListingsCategory(null)}
-                              data-testid="button-clear-saved-category-filter"
-                            >
-                              Clear Filter
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </div>
