@@ -34,6 +34,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria",
     isVerified: true,
     marketingPackage: "enterprise" as const,
+    locationLat: 47.3769,
+    locationLng: 8.5417,
+    preferredLocationName: "Zürich, Switzerland",
   },
   {
     id: "demo-user-2",
@@ -43,6 +46,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hans",
     isVerified: true,
     marketingPackage: "basic" as const,
+    locationLat: 47.5596,
+    locationLng: 7.5886,
+    preferredLocationName: "Basel, Switzerland",
   },
   {
     id: "demo-user-3",
@@ -52,6 +58,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie",
     isVerified: false,
     marketingPackage: "basic" as const,
+    locationLat: 46.2044,
+    locationLng: 6.1432,
+    preferredLocationName: "Geneva, Switzerland",
   },
   {
     id: "demo-user-4",
@@ -61,6 +70,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Thomas",
     isVerified: true,
     marketingPackage: "pro" as const,
+    locationLat: 46.9481,
+    locationLng: 7.4474,
+    preferredLocationName: "Bern, Switzerland",
   },
   {
     id: "demo-user-5",
@@ -70,6 +82,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Petra",
     isVerified: true,
     marketingPackage: "pro" as const,
+    locationLat: 46.5197,
+    locationLng: 6.6323,
+    preferredLocationName: "Lausanne, Switzerland",
   },
   {
     id: "demo-user-6",
@@ -79,6 +94,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Luca",
     isVerified: false,
     marketingPackage: "basic" as const,
+    locationLat: 46.0037,
+    locationLng: 8.9511,
+    preferredLocationName: "Lugano, Switzerland",
   },
   {
     id: "demo-user-7",
@@ -88,6 +106,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Anna",
     isVerified: true,
     marketingPackage: "premium" as const,
+    locationLat: 47.4245,
+    locationLng: 9.3767,
+    preferredLocationName: "St. Gallen, Switzerland",
   },
   {
     id: "demo-user-8",
@@ -97,6 +118,9 @@ const SAMPLE_USERS = [
     profileImageUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marco",
     isVerified: true,
     marketingPackage: "enterprise" as const,
+    locationLat: 47.0502,
+    locationLng: 8.3093,
+    preferredLocationName: "Lucerne, Switzerland",
   },
 ];
 
