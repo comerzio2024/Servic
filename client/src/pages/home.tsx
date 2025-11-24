@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, ArrowRight, Heart, MapPin, Loader2, Navigation, Search, X, ChevronDown, ChevronUp } from "lucide-react";
 import heroImg from "@assets/generated_images/abstract_community_connection_hero_background.png";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -32,7 +33,8 @@ export default function Home() {
   const [searchLocation, setSearchLocation] = useState<{lat: number; lng: number; name: string} | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [isNearbyExpanded, setIsNearbyExpanded] = useState(false);
-  const [isFavoritesExpanded, setIsFavoritesExpanded] = useState(false);
+  const [isAllListingsExpanded, setIsAllListingsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [useLocationPermissions, setUseLocationPermissions] = useState(false);
   const locationPermissionProcessingRef = useRef(false);
@@ -684,106 +686,119 @@ export default function Home() {
         </section>
       )}
 
-      {isAuthenticated && favorites && favorites.length > 0 && (
-        <section className="py-12 container mx-auto px-4 bg-slate-50">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              Your Saved Listings
-              <Badge variant="secondary" className="ml-2" data-testid="badge-favorites-count">{favorites.length}</Badge>
-            </h2>
-            <Link href="/favorites">
-              <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
-                View All <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-
-          <ServiceResultsRail
-            services={favorites.map(fav => fav.service)}
-            isLoading={false}
-            emptyMessage="No saved services"
-            emptyDescription="Start saving services you like to see them here"
-            isExpanded={isFavoritesExpanded}
-            onExpandChange={setIsFavoritesExpanded}
-            dataTestIdPrefix="favorite"
-            useCompactCardsWhenCollapsed={true}
-          />
-        </section>
-      )}
-
-
       <section className="py-12 bg-slate-50" data-testid="services-section">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">
-              {selectedCategory 
-                ? `${categories.find(c => c.id === selectedCategory)?.name || ''} Services`
-                : 'All Services'
-              }
-            </h2>
-            <div className="flex items-center gap-3">
-              {selectedCategory && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  data-testid="button-clear-category-filter"
-                >
-                  Clear Filter
-                </Button>
-              )}
-              <Link href="/services">
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  className="gap-1"
-                  data-testid="button-see-more-services"
-                >
-                  See More <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <TabsList className="bg-white">
+                <TabsTrigger value="all" className="gap-2" data-testid="tab-all-listings">
+                  <Sparkles className="w-4 h-4" />
+                  All Listings
+                  <Badge variant="secondary" className="ml-1">{filteredServices.length}</Badge>
+                </TabsTrigger>
+                {isAuthenticated && (
+                  <TabsTrigger value="saved" className="gap-2" data-testid="tab-saved-listings">
+                    <Heart className="w-4 h-4" />
+                    Saved Listings
+                    <Badge variant="secondary" className="ml-1">{favorites?.length || 0}</Badge>
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              
+              <div className="flex items-center gap-3">
+                {activeTab === "all" && selectedCategory && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedCategory(null)}
+                    data-testid="button-clear-category-filter"
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+                {activeTab === "all" && (
+                  <Link href="/services">
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      className="gap-1"
+                      data-testid="button-see-more-services"
+                    >
+                      See More <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
+                {activeTab === "saved" && (
+                  <Link href="/favorites">
+                    <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
+                      View All <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
 
-          {servicesLoading ? (
-            <div className="text-center py-20">
-              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-slate-400 animate-pulse" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
-            </div>
-          ) : filteredServices.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
-              {filteredServices.map((service, index) => (
-                <motion.div
-                  key={service.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  data-testid={`service-card-${service.id}`}
-                  className="h-full"
-                >
-                  <ServiceCard service={service} />
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
-              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900">
-                {selectedCategory ? 'No services in this category yet' : 'No services found'}
-              </h3>
-              <p className="text-slate-500">
-                {selectedCategory 
-                  ? 'Try selecting a different category or check back later'
-                  : 'Check back later for new services'
-                }
-              </p>
-            </div>
-          )}
+            <TabsContent value="all" className="mt-0">
+              {servicesLoading ? (
+                <div className="text-center py-20">
+                  <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-slate-400 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
+                </div>
+              ) : filteredServices.length > 0 ? (
+                <ServiceResultsRail
+                  services={filteredServices}
+                  isLoading={false}
+                  emptyMessage={selectedCategory ? 'No services in this category yet' : 'No services found'}
+                  emptyDescription={selectedCategory ? 'Try selecting a different category or check back later' : 'Check back later for new services'}
+                  isExpanded={isAllListingsExpanded}
+                  onExpandChange={setIsAllListingsExpanded}
+                  dataTestIdPrefix="all-listings"
+                  maxRows={3}
+                  columnsPerRow={4}
+                  alwaysUseGrid={true}
+                />
+              ) : (
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                  <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {selectedCategory ? 'No services in this category yet' : 'No services found'}
+                  </h3>
+                  <p className="text-slate-500">
+                    {selectedCategory 
+                      ? 'Try selecting a different category or check back later'
+                      : 'Check back later for new services'
+                    }
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            {isAuthenticated && (
+              <TabsContent value="saved" className="mt-0">
+                {favorites && favorites.length > 0 ? (
+                  <ServiceResultsRail
+                    services={favorites.map(fav => fav.service)}
+                    isLoading={false}
+                    emptyMessage="No saved services"
+                    emptyDescription="Start saving services you like to see them here"
+                    dataTestIdPrefix="favorite"
+                  />
+                ) : (
+                  <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                      <Heart className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">No saved services yet</h3>
+                    <p className="text-slate-500">Start saving services you like to see them here</p>
+                  </div>
+                )}
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
       </section>
     </Layout>

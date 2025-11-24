@@ -16,6 +16,9 @@ interface ServiceResultsRailProps {
   isExpanded?: boolean;
   onExpandChange?: (expanded: boolean) => void;
   useCompactCardsWhenCollapsed?: boolean;
+  maxRows?: number;
+  columnsPerRow?: number;
+  alwaysUseGrid?: boolean;
 }
 
 export function ServiceResultsRail({
@@ -28,6 +31,9 @@ export function ServiceResultsRail({
   isExpanded: controlledIsExpanded,
   onExpandChange,
   useCompactCardsWhenCollapsed = false,
+  maxRows = 0,
+  columnsPerRow = 4,
+  alwaysUseGrid = false,
 }: ServiceResultsRailProps) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
   const isExpanded = controlledIsExpanded ?? internalExpanded;
@@ -38,6 +44,11 @@ export function ServiceResultsRail({
       setInternalExpanded(expanded);
     }
   };
+
+  // Calculate services to display based on maxRows
+  const maxItemsToShow = maxRows > 0 ? maxRows * columnsPerRow : services.length;
+  const displayedServices = (maxRows > 0 && !isExpanded) ? services.slice(0, maxItemsToShow) : services;
+  const hasMoreToShow = maxRows > 0 && services.length > maxItemsToShow;
 
   if (isLoading) {
     return (
@@ -56,10 +67,13 @@ export function ServiceResultsRail({
     );
   }
 
+  // Determine display mode: horizontal rail or grid
+  const useHorizontalRail = !alwaysUseGrid && !isExpanded && useCompactCardsWhenCollapsed;
+
   return (
     <div className="space-y-4">
       <AnimatePresence mode="wait">
-        {!isExpanded ? (
+        {useHorizontalRail ? (
           <motion.div
             key="compact"
             initial={{ opacity: 0 }}
@@ -78,7 +92,7 @@ export function ServiceResultsRail({
             </div>
             <div className="overflow-x-auto overflow-y-hidden -mx-4 px-4 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-slate-100 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-primary/80 [&::-webkit-scrollbar-thumb]:transition-colors">
               <div className="flex gap-4 pb-4 min-w-min" data-testid={`${dataTestIdPrefix}-rail-compact`}>
-                {services.map((service) => (
+                {displayedServices.map((service) => (
                   <motion.div
                     key={service.id}
                     className={cn(
@@ -107,7 +121,7 @@ export function ServiceResultsRail({
             transition={{ duration: 0.2 }}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid={`${dataTestIdPrefix}-rail-expanded`}>
-              {services.map((service, index) => (
+              {displayedServices.map((service, index) => (
                 <motion.div
                   key={service.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -115,7 +129,13 @@ export function ServiceResultsRail({
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   data-testid={`${dataTestIdPrefix}-card-${service.id}`}
                 >
-                  <ServiceCard service={service} />
+                  {/* Use compact cards on small screens (< sm breakpoint) */}
+                  <div className="sm:hidden">
+                    <ServiceCard service={service} compact={true} />
+                  </div>
+                  <div className="hidden sm:block">
+                    <ServiceCard service={service} />
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -123,7 +143,7 @@ export function ServiceResultsRail({
         )}
       </AnimatePresence>
 
-      {services.length > 0 && (
+      {services.length > 0 && hasMoreToShow && (
         <div className="flex justify-center pt-2">
           <motion.div
             whileHover={{ scale: 1.05 }}
