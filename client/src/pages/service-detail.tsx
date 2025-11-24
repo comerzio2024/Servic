@@ -294,15 +294,6 @@ function ServiceDetailContent({ serviceId }: { serviceId: string }) {
                       </div>
                     </div>
                   )}
-
-                  {/* Tags Section */}
-                  {service.tags && service.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {service.tags.map(tag => (
-                        <Badge key={tag} variant="outline" className="px-3 py-1 text-sm bg-slate-50">#{tag}</Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 
