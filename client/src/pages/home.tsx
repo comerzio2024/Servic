@@ -57,8 +57,8 @@ export default function Home() {
   // Pagination state for All Listings and Saved Listings
   const [allListingsPage, setAllListingsPage] = useState(1);
   const [savedListingsPage, setSavedListingsPage] = useState(1);
-  const ALL_LISTINGS_PER_PAGE = 16; // 4 rows × 4 columns
-  const SAVED_LISTINGS_PER_PAGE = 16; // 4 rows × 4 columns
+  const ALL_LISTINGS_PER_PAGE = 12; // Divisible by 1,2,3,4 columns for complete rows
+  const SAVED_LISTINGS_PER_PAGE = 12; // Divisible by 1,2,3,4 columns for complete rows
   
   // Use shared geocoding hook for location search
   const { 
