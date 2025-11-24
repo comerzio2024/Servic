@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout";
 import { ServiceCard } from "@/components/service-card";
 import { ServiceResultsRail } from "@/components/service-results-rail";
 import { GoogleMaps } from "@/components/google-maps";
+import { CategoryFilterBar } from "@/components/category-filter-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,6 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useGeocoding } from "@/hooks/useGeocoding";
 import { geocodeLocation, suggestionToGeocodeResult, type GeocodingSuggestion } from "@/lib/geocoding";
 
+type SortOption = "newest" | "oldest" | "most-viewed" | "price-low" | "price-high";
+
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -38,6 +41,14 @@ export default function Home() {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [useLocationPermissions, setUseLocationPermissions] = useState(false);
   const locationPermissionProcessingRef = useRef(false);
+  
+  // Independent state for All Listings tab
+  const [allListingsCategory, setAllListingsCategory] = useState<string | null>(null);
+  const [allListingsSort, setAllListingsSort] = useState<SortOption>("newest");
+  
+  // Independent state for Saved Listings tab
+  const [savedListingsCategory, setSavedListingsCategory] = useState<string | null>(null);
+  const [savedListingsSort, setSavedListingsSort] = useState<SortOption>("newest");
   
   // Use shared geocoding hook for location search
   const { 
@@ -57,6 +68,18 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
+
+  // Handle tab switch when authentication changes - switch to "all" if on "saved" and user logs out
+  useEffect(() => {
+    if (!isAuthenticated && activeTab === "saved") {
+      setActiveTab("all");
+    }
+  }, [isAuthenticated, activeTab]);
+
+  // Sync hero category filter to All Listings tab
+  useEffect(() => {
+    setAllListingsCategory(selectedCategory);
+  }, [selectedCategory]);
 
   // Auto-load user's saved location on mount (works for all users with stored location)
   useEffect(() => {
@@ -389,6 +412,80 @@ export default function Home() {
     });
     return counts;
   }, [services]);
+  
+  // Sorting function
+  const sortServices = (servicesList: ServiceWithDetails[], sortBy: SortOption) => {
+    return [...servicesList].sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "most-viewed":
+          return b.viewCount - a.viewCount;
+        case "price-low":
+          const priceA = a.priceType === "fixed" && a.price !== null 
+            ? (typeof a.price === 'string' ? parseFloat(a.price) : a.price) 
+            : 0;
+          const priceB = b.priceType === "fixed" && b.price !== null 
+            ? (typeof b.price === 'string' ? parseFloat(b.price) : b.price) 
+            : 0;
+          const safePriceA = isNaN(priceA) ? 0 : priceA;
+          const safePriceB = isNaN(priceB) ? 0 : priceB;
+          return safePriceA - safePriceB;
+        case "price-high":
+          const priceA2 = a.priceType === "fixed" && a.price !== null 
+            ? (typeof a.price === 'string' ? parseFloat(a.price) : a.price) 
+            : 0;
+          const priceB2 = b.priceType === "fixed" && b.price !== null 
+            ? (typeof b.price === 'string' ? parseFloat(b.price) : b.price) 
+            : 0;
+          const safePriceA2 = isNaN(priceA2) ? 0 : priceA2;
+          const safePriceB2 = isNaN(priceB2) ? 0 : priceB2;
+          return safePriceB2 - safePriceA2;
+        default:
+          return 0;
+      }
+    });
+  };
+  
+  // Filtered and sorted All Listings
+  const filteredAllListings = useMemo(() => {
+    let filtered = services;
+    if (allListingsCategory) {
+      filtered = filtered.filter(service => service.categoryId === allListingsCategory);
+    }
+    return sortServices(filtered, allListingsSort);
+  }, [services, allListingsCategory, allListingsSort]);
+  
+  // Category counts for All Listings
+  const allListingsCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    services.forEach(service => {
+      counts[service.categoryId] = (counts[service.categoryId] || 0) + 1;
+    });
+    return counts;
+  }, [services]);
+  
+  // Filtered and sorted Saved Listings
+  const filteredSavedListings = useMemo(() => {
+    const savedServices = favorites?.map(fav => fav.service) || [];
+    let filtered = savedServices;
+    if (savedListingsCategory) {
+      filtered = filtered.filter(service => service.categoryId === savedListingsCategory);
+    }
+    return sortServices(filtered, savedListingsSort);
+  }, [favorites, savedListingsCategory, savedListingsSort]);
+  
+  // Category counts for Saved Listings
+  const savedListingsCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const savedServices = favorites?.map(fav => fav.service) || [];
+    savedServices.forEach(service => {
+      counts[service.categoryId] = (counts[service.categoryId] || 0) + 1;
+    });
+    return counts;
+  }, [favorites]);
 
   return (
     <Layout>
@@ -689,115 +786,209 @@ export default function Home() {
       <section className="py-12 bg-slate-50" data-testid="services-section">
         <div className="container mx-auto px-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <TabsList className="bg-white">
-                <TabsTrigger value="all" className="gap-2" data-testid="tab-all-listings">
-                  <Sparkles className="w-4 h-4" />
-                  All Listings
-                  <Badge variant="secondary" className="ml-1">{filteredServices.length}</Badge>
-                </TabsTrigger>
-                {isAuthenticated && (
-                  <TabsTrigger value="saved" className="gap-2" data-testid="tab-saved-listings">
-                    <Heart className="w-4 h-4" />
-                    Saved Listings
-                    <Badge variant="secondary" className="ml-1">{favorites?.length || 0}</Badge>
-                  </TabsTrigger>
-                )}
-              </TabsList>
-              
-              <div className="flex items-center gap-3">
-                {activeTab === "all" && selectedCategory && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setSelectedCategory(null)}
-                    data-testid="button-clear-category-filter"
-                  >
-                    Clear Filter
-                  </Button>
-                )}
-                {activeTab === "all" && (
-                  <Link href="/services">
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      className="gap-1"
-                      data-testid="button-see-more-services"
-                    >
-                      See More <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                )}
-                {activeTab === "saved" && (
-                  <Link href="/favorites">
-                    <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
-                      View All <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </div>
+            <TabsList className="bg-white mb-0">
+              <TabsTrigger value="all" className="gap-2" data-testid="tab-all-listings">
+                <Sparkles className="w-4 h-4" />
+                All Listings
+                <Badge variant="secondary" className="ml-1">{filteredAllListings.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="gap-2" data-testid="tab-saved-listings">
+                <Heart className="w-4 h-4" />
+                Saved Listings
+                <Badge variant="secondary" className="ml-1">{favorites?.length || 0}</Badge>
+              </TabsTrigger>
+            </TabsList>
 
             <TabsContent value="all" className="mt-0">
-              {servicesLoading ? (
-                <div className="text-center py-20">
-                  <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Sparkles className="w-8 h-8 text-slate-400 animate-pulse" />
+              <CategoryFilterBar
+                categories={categories}
+                selectedCategory={allListingsCategory}
+                onCategoryChange={setAllListingsCategory}
+                serviceCount={services.length}
+                categoryCounts={allListingsCategoryCounts}
+                newCounts={newCountsMap}
+              />
+              
+              <div className="bg-white border-b shadow-sm">
+                <div className="container mx-auto px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="all-listings-sort" className="text-sm font-medium text-slate-700">
+                        Sort by:
+                      </Label>
+                      <Select value={allListingsSort} onValueChange={(value: SortOption) => setAllListingsSort(value)}>
+                        <SelectTrigger id="all-listings-sort" className="w-48" data-testid="select-all-listings-sort">
+                          <SelectValue placeholder="Sort by: Newest First" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="newest">Newest First</SelectItem>
+                          <SelectItem value="oldest">Oldest First</SelectItem>
+                          <SelectItem value="most-viewed">Most Viewed</SelectItem>
+                          <SelectItem value="price-low">Price: Low to High</SelectItem>
+                          <SelectItem value="price-high">Price: High to Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {allListingsCategory && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setAllListingsCategory(null)}
+                          data-testid="button-clear-all-category-filter"
+                        >
+                          Clear Filter
+                        </Button>
+                      )}
+                      <Link href="/services">
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          className="gap-1"
+                          data-testid="button-see-more-services"
+                        >
+                          See More <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
                 </div>
-              ) : filteredServices.length > 0 ? (
-                <ServiceResultsRail
-                  services={filteredServices}
-                  isLoading={false}
-                  emptyMessage={selectedCategory ? 'No services in this category yet' : 'No services found'}
-                  emptyDescription={selectedCategory ? 'Try selecting a different category or check back later' : 'Check back later for new services'}
-                  isExpanded={isAllListingsExpanded}
-                  onExpandChange={setIsAllListingsExpanded}
-                  dataTestIdPrefix="all-listings"
-                  maxRows={3}
-                  columnsPerRow={4}
-                  alwaysUseGrid={true}
-                />
-              ) : (
-                <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
-                  <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Sparkles className="w-8 h-8 text-slate-400" />
+              </div>
+              
+              <div className="mt-6">
+                {servicesLoading ? (
+                  <div className="text-center py-20">
+                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                      <Sparkles className="w-8 h-8 text-slate-400 animate-pulse" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {selectedCategory ? 'No services in this category yet' : 'No services found'}
-                  </h3>
-                  <p className="text-slate-500">
-                    {selectedCategory 
-                      ? 'Try selecting a different category or check back later'
-                      : 'Check back later for new services'
-                    }
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            {isAuthenticated && (
-              <TabsContent value="saved" className="mt-0">
-                {favorites && favorites.length > 0 ? (
+                ) : filteredAllListings.length > 0 ? (
                   <ServiceResultsRail
-                    services={favorites.map(fav => fav.service)}
+                    services={filteredAllListings}
                     isLoading={false}
-                    emptyMessage="No saved services"
-                    emptyDescription="Start saving services you like to see them here"
-                    dataTestIdPrefix="favorite"
+                    emptyMessage={allListingsCategory ? 'No services in this category yet' : 'No services found'}
+                    emptyDescription={allListingsCategory ? 'Try selecting a different category or check back later' : 'Check back later for new services'}
+                    isExpanded={isAllListingsExpanded}
+                    onExpandChange={setIsAllListingsExpanded}
+                    dataTestIdPrefix="all-listings"
+                    maxRows={3}
+                    columnsPerRow={4}
+                    alwaysUseGrid={true}
                   />
                 ) : (
                   <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <Heart className="w-8 h-8 text-slate-400" />
+                      <Sparkles className="w-8 h-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">No saved services yet</h3>
-                    <p className="text-slate-500">Start saving services you like to see them here</p>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {allListingsCategory ? 'No services in this category yet' : 'No services found'}
+                    </h3>
+                    <p className="text-slate-500">
+                      {allListingsCategory 
+                        ? 'Try selecting a different category or check back later'
+                        : 'Check back later for new services'
+                      }
+                    </p>
                   </div>
                 )}
-              </TabsContent>
-            )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="saved" className="mt-0">
+              {isAuthenticated ? (
+                <>
+                  <CategoryFilterBar
+                    categories={categories}
+                    selectedCategory={savedListingsCategory}
+                    onCategoryChange={setSavedListingsCategory}
+                    serviceCount={favorites?.length || 0}
+                    categoryCounts={savedListingsCategoryCounts}
+                    newCounts={newCountsMap}
+                  />
+                  
+                  <div className="bg-white border-b shadow-sm">
+                    <div className="container mx-auto px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Label htmlFor="saved-listings-sort" className="text-sm font-medium text-slate-700">
+                            Sort by:
+                          </Label>
+                          <Select value={savedListingsSort} onValueChange={(value: SortOption) => setSavedListingsSort(value)}>
+                            <SelectTrigger id="saved-listings-sort" className="w-48" data-testid="select-saved-listings-sort">
+                              <SelectValue placeholder="Sort by: Newest First" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="newest">Newest First</SelectItem>
+                              <SelectItem value="oldest">Oldest First</SelectItem>
+                              <SelectItem value="most-viewed">Most Viewed</SelectItem>
+                              <SelectItem value="price-low">Price: Low to High</SelectItem>
+                              <SelectItem value="price-high">Price: High to Low</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          {savedListingsCategory && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSavedListingsCategory(null)}
+                              data-testid="button-clear-saved-category-filter"
+                            >
+                              Clear Filter
+                            </Button>
+                          )}
+                          <Link href="/favorites">
+                            <Button variant="ghost" className="gap-1" data-testid="button-view-all-favorites">
+                              View All <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6">
+                    {filteredSavedListings.length > 0 ? (
+                      <ServiceResultsRail
+                        services={filteredSavedListings}
+                        isLoading={false}
+                        emptyMessage="No saved services"
+                        emptyDescription="Start saving services you like to see them here"
+                        dataTestIdPrefix="saved-listings"
+                        maxRows={3}
+                        columnsPerRow={4}
+                        alwaysUseGrid={true}
+                      />
+                    ) : (
+                      <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                        <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                          <Heart className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          {savedListingsCategory ? 'No saved services in this category' : 'No saved services yet'}
+                        </h3>
+                        <p className="text-slate-500">
+                          {savedListingsCategory 
+                            ? 'Try selecting a different category' 
+                            : 'Start saving services you like to see them here'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed">
+                  <Heart className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Save Your Favorite Services</h3>
+                  <p className="text-muted-foreground mb-4">Log in to start saving services you love</p>
+                  <Button onClick={() => window.location.href = "/api/login"} data-testid="button-login-cta">Log In</Button>
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </div>
       </section>
