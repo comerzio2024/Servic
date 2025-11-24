@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Star, MapPin, CheckCircle2, Heart, Hash } from "lucide-react";
+import { Star, MapPin, CheckCircle2, Heart } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useCroppedImage } from "@/hooks/useCroppedImage";
@@ -214,24 +214,6 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
           </div>
           <span className="text-muted-foreground text-sm">({service.reviewCount} reviews)</span>
         </div>
-
-        {/* Hashtags Section */}
-        {service.hashtags && service.hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {service.hashtags.slice(0, 3).map(tag => (
-              <Link
-                key={tag}
-                href={`/hashtags/${tag}`}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
-                data-testid={`hashtag-${tag}`}
-              >
-                <Hash className="w-3 h-3 mr-0.5" />
-                {tag}
-              </Link>
-            ))}
-          </div>
-        )}
       </CardContent>
 
       {/* Pricing section - FULL WIDTH, separate line with responsive font sizing */}
