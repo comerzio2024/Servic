@@ -34,6 +34,11 @@ interface ImageManagerProps {
   onMainImageChange: (index: number) => void;
 }
 
+interface DragPosition {
+  x: number;
+  y: number;
+}
+
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -52,6 +57,7 @@ export function ImageManager({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const validateFiles = (files: File[]): { validFiles: File[]; errors: string[] } => {
     const validFiles: File[] = [];
@@ -177,11 +183,17 @@ export function ImageManager({
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
+    setHoveredIndex(index);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
+    
+    // Only reorder if we're hovering over a different position
+    if (hoveredIndex === index) return;
+    
+    setHoveredIndex(index);
 
     const newImages = [...images];
     const newMetadata = [...imageMetadata];
@@ -217,6 +229,7 @@ export function ImageManager({
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
+    setHoveredIndex(null);
   };
 
   const handleSetMainImage = (index: number) => {
@@ -376,21 +389,24 @@ export function ImageManager({
       {/* Image grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="wait">
             {images.map((img, idx) => (
               <motion.div
-                key={img}
+                key={`${idx}-${img}`}
                 layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.3, layout: { duration: 0.4 } }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ 
+                  layout: { type: "spring", stiffness: 300, damping: 30 },
+                  opacity: { duration: 0.2 }
+                }}
                 draggable
                 onDragStart={() => handleDragStart(idx)}
                 onDragOver={(e) => handleDragOver(e, idx)}
                 onDragEnd={handleDragEnd}
                 className={`relative group cursor-move transition-opacity ${
-                  draggedIndex === idx ? 'opacity-50' : ''
+                  draggedIndex === idx ? 'opacity-30 scale-95' : ''
                 }`}
                 data-testid={`image-preview-${idx}`}
               >
