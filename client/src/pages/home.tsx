@@ -842,15 +842,15 @@ export default function Home() {
                 <p className="text-slate-500">Try increasing the search radius to discover more services</p>
               </div>
             ) : nearbyMode === 'slider' ? (
-              <ScrollArea className="w-full">
-                <div className="flex gap-4 pb-4">
+              <div className="w-full overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+                <div className="flex gap-4 min-w-max">
                   {nearbyServices.map((service) => (
                     <div key={service.id} className="w-80 flex-shrink-0" data-testid={`nearby-service-slider-${service.id}`}>
                       <ServiceCard service={service} />
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             ) : (
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
