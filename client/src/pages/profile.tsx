@@ -36,9 +36,18 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   
+  // Track search string to detect query param changes
+  const [searchString, setSearchString] = useState(window.location.search);
+  
+  // Update search string when location changes
+  useEffect(() => {
+    setSearchString(window.location.search);
+  }, [location]);
+  
   // Read tab parameter from URL query string
   const getInitialTab = () => {
-    const searchParams = new URLSearchParams(location.split('?')[1] || '');
+    const search = window.location.search;
+    const searchParams = new URLSearchParams(search);
     const tabParam = searchParams.get('tab');
     if (tabParam && ['profile', 'services', 'reviews'].includes(tabParam)) {
       return tabParam;
@@ -48,9 +57,10 @@ export default function Profile() {
   
   const [activeTab, setActiveTab] = useState(getInitialTab());
 
-  // Watch for location changes and update active tab
+  // Watch for query param changes and update active tab
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.split('?')[1] || '');
+    const search = window.location.search;
+    const searchParams = new URLSearchParams(search);
     const tabParam = searchParams.get('tab');
     if (tabParam && ['profile', 'services', 'reviews'].includes(tabParam)) {
       setActiveTab(tabParam);
@@ -58,7 +68,7 @@ export default function Profile() {
       // Reset to profile tab when no tab parameter is present
       setActiveTab('profile');
     }
-  }, [location]);
+  }, [searchString]);
 
   // Scroll to top when changing tabs
   useEffect(() => {
@@ -555,7 +565,13 @@ export default function Profile() {
             </Button>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs 
+            value={activeTab} 
+            onValueChange={(value) => {
+              setLocation(`/profile?tab=${value}`);
+            }} 
+            className="w-full"
+          >
             <TabsList className="mb-6 bg-white p-1 border border-border">
               <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
               <TabsTrigger value="services" data-testid="tab-my-services">My Listings</TabsTrigger>
