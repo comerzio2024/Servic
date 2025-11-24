@@ -244,7 +244,9 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
             </>
           )}
           {service.priceType === 'text' && (
-            <span className="text-sm sm:text-base md:text-lg font-medium text-foreground line-clamp-2 break-words">{service.priceText}</span>
+            <Link href={`/service/${service.id}`} className="text-sm sm:text-base md:text-lg font-semibold text-primary hover:text-primary/80 underline underline-offset-4 transition-colors">
+              Visit Listing
+            </Link>
           )}
           {service.priceType === 'list' && (
             <span className="text-sm sm:text-base md:text-lg font-medium text-foreground whitespace-nowrap">From CHF {(service.priceList as any)?.[0]?.price || 'N/A'}</span>
