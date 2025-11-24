@@ -81,11 +81,27 @@ export function GoogleMaps({
       { lat: userLocation.lat, lng: userLocation.lng }
     );
 
+    // Track positions to add offset for overlapping markers
+    const positionCounts = new Map<string, number>();
+
     closestServices.forEach((service, index) => {
       if (!service.owner?.locationLat || !service.owner?.locationLng) return;
 
-      const serviceLat = parseFloat(service.owner.locationLat as any);
-      const serviceLng = parseFloat(service.owner.locationLng as any);
+      let serviceLat = parseFloat(service.owner.locationLat as any);
+      let serviceLng = parseFloat(service.owner.locationLng as any);
+
+      // Create a key for this position to detect duplicates
+      const posKey = `${serviceLat.toFixed(4)},${serviceLng.toFixed(4)}`;
+      const count = positionCounts.get(posKey) || 0;
+      positionCounts.set(posKey, count + 1);
+
+      // Add small offset for overlapping markers (circle pattern)
+      if (count > 0) {
+        const angle = (count * 60) * (Math.PI / 180); // 60 degrees apart
+        const offsetDistance = 0.002; // ~200m offset
+        serviceLat += offsetDistance * Math.cos(angle);
+        serviceLng += offsetDistance * Math.sin(angle);
+      }
 
       const serviceMarker = new google.maps.Marker({
         map: mapRef.current,
