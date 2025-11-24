@@ -52,6 +52,7 @@ interface FormData {
   imageMetadata: ImageMetadata[];
   mainImageIndex: number;
   hashtags: string[];
+  selectedPromotionalPackage?: string | null;
 }
 
 export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, service }: ServiceFormModalProps) {
@@ -77,6 +78,7 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
     imageMetadata: [] as ImageMetadata[],
     mainImageIndex: 0,
     hashtags: [] as string[],
+    selectedPromotionalPackage: null,
   });
   const [draftSaved, setDraftSaved] = useState(false);
   const [validatingAddresses, setValidatingAddresses] = useState(false);
@@ -172,6 +174,7 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
         imageMetadata: service.imageMetadata || [],
         mainImageIndex: service.mainImageIndex || 0,
         hashtags: service.hashtags || [],
+        selectedPromotionalPackage: null,
       });
       
       initializedRef.current = true;
@@ -664,15 +667,25 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs defaultValue="media" className="w-full">
+          <Tabs defaultValue="main" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="media">Images & Contacts</TabsTrigger>
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="pricing">Pricing & Location</TabsTrigger>
+              <TabsTrigger value="main">Main Info</TabsTrigger>
+              <TabsTrigger value="location">Location & Contacts</TabsTrigger>
+              <TabsTrigger value="pricing">Pricing & Plans</TabsTrigger>
             </TabsList>
 
-            {/* Basic Info Tab */}
-            <TabsContent value="basic" className="space-y-6">
+            {/* Main Info Tab - Images + Basic Info */}
+            <TabsContent value="main" className="space-y-6">
+              {/* Images */}
+              <ImageManager
+                images={formData.images}
+                imageMetadata={formData.imageMetadata}
+                mainImageIndex={formData.mainImageIndex}
+                maxImages={maxImages}
+                onImagesChange={(images: string[]) => setFormData((prev: FormData | null) => ({ ...prev!, images }))}
+                onMetadataChange={(metadata: ImageMetadata[]) => setFormData((prev: FormData | null) => ({ ...prev!, imageMetadata: metadata }))}
+                onMainImageChange={(index: number) => setFormData((prev: FormData | null) => ({ ...prev!, mainImageIndex: index }))}
+              />
               <div className="space-y-2">
                 <Label htmlFor="title">Service Title *</Label>
                 <Input
@@ -827,7 +840,74 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
               </div>
             </TabsContent>
 
-            {/* Pricing & Location Tab */}
+            {/* Location & Contacts Tab */}
+            <TabsContent value="location" className="space-y-6">
+              {/* Locations */}
+              <div className="space-y-4">
+                {addressErrors.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <ul className="list-disc pl-4">
+                        {addressErrors.map((error: string, idx: number) => (
+                          <li key={idx}>{error}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <LocationAutocomplete
+                  locations={formData.locations.filter((l: string) => l.trim())}
+                  onLocationsChange={(locations: string[]) => setFormData((prev: FormData | null) => ({ ...prev!, locations }))}
+                  maxLocations={10}
+                  label="Service Locations"
+                  required={true}
+                  testIdPrefix="service-location"
+                />
+                {settings?.enableSwissAddressValidation && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Addresses will be validated to ensure they are in Switzerland
+                  </p>
+                )}
+              </div>
+
+              {/* Contacts */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>Contact Information *</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addContact}
+                    data-testid="button-add-contact"
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add Another Contact
+                  </Button>
+                </div>
+                
+                {formData.contacts.map((contact: Contact, idx: number) => (
+                  <ContactInput
+                    key={idx}
+                    contact={contact}
+                    index={idx}
+                    canRemove={formData.contacts.length > 1}
+                    verificationEnabled={!!verificationEnabled}
+                    showVerification={false}
+                    onUpdate={updateContact}
+                    onRemove={removeContact}
+                  />
+                ))}
+
+                {formData.contacts.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Please add at least one contact method
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Pricing & Plans Tab */}
             <TabsContent value="pricing" className="space-y-6">
               <div className="space-y-2">
                 <Label>Pricing Type *</Label>
@@ -944,82 +1024,82 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
                 </div>
               )}
 
-              {/* Locations */}
-              <div className="space-y-4">
-                {addressErrors.length > 0 && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      <ul className="list-disc pl-4">
-                        {addressErrors.map((error: string, idx: number) => (
-                          <li key={idx}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <LocationAutocomplete
-                  locations={formData.locations.filter((l: string) => l.trim())}
-                  onLocationsChange={(locations: string[]) => setFormData((prev: FormData | null) => ({ ...prev!, locations }))}
-                  maxLocations={10}
-                  label="Service Locations"
-                  required={true}
-                  testIdPrefix="service-location"
-                />
-                {settings?.enableSwissAddressValidation && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Addresses will be validated to ensure they are in Switzerland
+              {/* Promotional Packages Section */}
+              <div className="space-y-4 mt-8 pt-8 border-t">
+                <div>
+                  <Label>Boost Your Service (Optional)</Label>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">
+                    Select a promotional package to increase visibility
                   </p>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Media & Contact Tab */}
-            <TabsContent value="media" className="space-y-6">
-              {/* Images */}
-              <ImageManager
-                images={formData.images}
-                imageMetadata={formData.imageMetadata}
-                mainImageIndex={formData.mainImageIndex}
-                maxImages={maxImages}
-                onImagesChange={(images: string[]) => setFormData((prev: FormData | null) => ({ ...prev!, images }))}
-                onMetadataChange={(metadata: ImageMetadata[]) => setFormData((prev: FormData | null) => ({ ...prev!, imageMetadata: metadata }))}
-                onMainImageChange={(index: number) => setFormData((prev: FormData | null) => ({ ...prev!, mainImageIndex: index }))}
-              />
-
-              {/* Contacts */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label>Contact Information *</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={addContact}
-                    data-testid="button-add-contact"
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Add Another Contact
-                  </Button>
                 </div>
-                
-                {formData.contacts.map((contact: Contact, idx: number) => (
-                  <ContactInput
-                    key={idx}
-                    contact={contact}
-                    index={idx}
-                    canRemove={formData.contacts.length > 1}
-                    verificationEnabled={!!verificationEnabled}
-                    showVerification={false}
-                    onUpdate={updateContact}
-                    onRemove={removeContact}
-                  />
-                ))}
 
-                {formData.contacts.length === 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Standard - Free */}
+                  <div
+                    onClick={() => setFormData({ ...formData, selectedPromotionalPackage: null })}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.selectedPromotionalPackage === null
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    data-testid="package-standard"
+                  >
+                    <div className="font-semibold">Standard Listing</div>
+                    <div className="text-2xl font-bold text-primary mt-2">Free</div>
+                    <ul className="text-sm text-muted-foreground mt-3 space-y-1">
+                      <li>✓ Regular listing</li>
+                      <li>✓ Basic visibility</li>
+                      <li>✓ Customer reviews</li>
+                    </ul>
+                  </div>
+
+                  {/* Featured Service */}
+                  <div
+                    onClick={() => setFormData({ ...formData, selectedPromotionalPackage: "featured" })}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all relative ${
+                      formData.selectedPromotionalPackage === "featured"
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    data-testid="package-featured"
+                  >
+                    <div className="absolute -top-2 left-4 bg-primary text-white text-xs px-2 py-1 rounded-full">Popular</div>
+                    <div className="font-semibold">Featured Service</div>
+                    <div className="text-2xl font-bold text-primary mt-2">CHF 9.99</div>
+                    <ul className="text-sm text-muted-foreground mt-3 space-y-1">
+                      <li>✓ Everything in Standard</li>
+                      <li>✓ Featured badge</li>
+                      <li>✓ Higher in search</li>
+                    </ul>
+                  </div>
+
+                  {/* Premium Service */}
+                  <div
+                    onClick={() => setFormData({ ...formData, selectedPromotionalPackage: "premium" })}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.selectedPromotionalPackage === "premium"
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    data-testid="package-premium"
+                  >
+                    <div className="font-semibold">Premium Service</div>
+                    <div className="text-2xl font-bold text-primary mt-2">CHF 19.99</div>
+                    <ul className="text-sm text-muted-foreground mt-3 space-y-1">
+                      <li>✓ Everything in Featured</li>
+                      <li>✓ Premium badge</li>
+                      <li>✓ Gallery boost (8 images)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Account Plans Info */}
+                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg mt-4">
+                  <p className="text-sm font-medium mb-2">💡 Pro Tip: Account-wide Packages</p>
                   <p className="text-sm text-muted-foreground">
-                    Please add at least one contact method
+                    Upgrade your account to Professional or Pro Plan to boost ALL your services and get priority support. Available in account settings.
                   </p>
-                )}
+                </div>
               </div>
             </TabsContent>
           </Tabs>
