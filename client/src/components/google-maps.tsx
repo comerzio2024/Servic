@@ -30,6 +30,7 @@ export function GoogleMaps({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const isInitializedRef = useRef(false);
+  const hasFitBoundsRef = useRef(false);
 
   // Filter and sort services
   const closestServices = services
@@ -38,7 +39,7 @@ export function GoogleMaps({
     .slice(0, maxServices);
 
   // Update markers when services change
-  const updateMarkers = useCallback(() => {
+  const updateMarkers = useCallback((shouldFitBounds = false) => {
     const google = (window as GoogleMapsWindow).google;
     if (!google || !mapRef.current || !userLocation) return;
 
@@ -119,9 +120,10 @@ export function GoogleMaps({
       bounds.extend({ lat: serviceLat, lng: serviceLng });
     });
 
-    // Fit bounds to show all markers
-    if (closestServices.length > 0) {
+    // Only fit bounds on initial load or when explicitly requested
+    if (shouldFitBounds && closestServices.length > 0) {
       mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+      hasFitBoundsRef.current = true;
     }
   }, [userLocation, closestServices]);
 
@@ -145,7 +147,9 @@ export function GoogleMaps({
 
       mapRef.current = map;
       isInitializedRef.current = true;
-      updateMarkers();
+      hasFitBoundsRef.current = false;
+      // Fit bounds on initial load
+      updateMarkers(true);
     }
 
     // Load Google Maps script if not already loaded
@@ -161,10 +165,10 @@ export function GoogleMaps({
     }
   }, [isMapVisible, apiKey]);
 
-  // Update markers when services or location change
+  // Update markers when services or location change (without refitting bounds)
   useEffect(() => {
-    if (isMapVisible && isInitializedRef.current) {
-      updateMarkers();
+    if (isMapVisible && isInitializedRef.current && hasFitBoundsRef.current) {
+      updateMarkers(false);
     }
   }, [isMapVisible, updateMarkers]);
 
