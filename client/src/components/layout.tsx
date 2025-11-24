@@ -17,9 +17,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // Smart navigation function for profile tabs
   const navigateToProfile = (tab?: string) => {
-    // Always include tab parameter so URL actually changes and triggers re-render
     const tabToUse = tab || 'profile';
-    setLocation(`/profile?tab=${tabToUse}`);
+    const newUrl = `/profile?tab=${tabToUse}`;
+    // Use pushState to change URL and dispatch event so profile page detects the change
+    window.history.pushState({ tab: tabToUse }, '', newUrl);
+    // Dispatch custom event for profile page to listen
+    window.dispatchEvent(new CustomEvent('profileTabChange', { detail: { tab: tabToUse } }));
   };
 
   return (

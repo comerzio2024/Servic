@@ -36,11 +36,9 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   
-  // Extract tab from location using wouter's location variable (not window.location)
-  const getTabFromLocation = (loc: string) => {
-    const queryIndex = loc.indexOf('?');
-    if (queryIndex === -1) return 'profile';
-    const search = loc.substring(queryIndex);
+  // Extract tab from URL search params
+  const getTabFromUrl = () => {
+    const search = window.location.search;
     const searchParams = new URLSearchParams(search);
     const tabParam = searchParams.get('tab');
     if (tabParam && ['profile', 'services', 'reviews'].includes(tabParam)) {
@@ -49,12 +47,29 @@ export default function Profile() {
     return 'profile';
   };
 
-  const [activeTab, setActiveTab] = useState(() => getTabFromLocation(location));
+  const [activeTab, setActiveTab] = useState(() => getTabFromUrl());
 
-  // Watch for location changes from wouter and update active tab
+  // Listen for tab changes from navigation or popstate
   useEffect(() => {
-    setActiveTab(getTabFromLocation(location));
-  }, [location]);
+    // Handle custom event from navigation dropdown
+    const handleTabChange = (e: Event) => {
+      const event = e as CustomEvent;
+      setActiveTab(event.detail.tab);
+    };
+    
+    // Handle browser back/forward
+    const handlePopState = () => {
+      setActiveTab(getTabFromUrl());
+    };
+    
+    window.addEventListener('profileTabChange', handleTabChange);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('profileTabChange', handleTabChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   // Scroll to top when changing tabs
   useEffect(() => {
