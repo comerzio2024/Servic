@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Map, ZoomIn, ZoomOut, X } from "lucide-react";
@@ -32,11 +32,14 @@ export function GoogleMaps({
   const isInitializedRef = useRef(false);
   const hasFitBoundsRef = useRef(false);
 
-  // Filter and sort services
-  const closestServices = services
-    .filter(s => s.owner?.locationLat && s.owner?.locationLng)
-    .sort((a, b) => (a.distance || 0) - (b.distance || 0))
-    .slice(0, maxServices);
+  // Memoize filtered services to prevent unnecessary recalculations
+  const closestServices = useMemo(() => 
+    services
+      .filter(s => s.owner?.locationLat && s.owner?.locationLng)
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0))
+      .slice(0, maxServices),
+    [services, maxServices]
+  );
 
   // Update markers when services change
   const updateMarkers = useCallback((shouldFitBounds = false) => {
@@ -165,12 +168,12 @@ export function GoogleMaps({
     }
   }, [isMapVisible, apiKey]);
 
-  // Update markers when services or location change (without refitting bounds)
+  // Update markers when services change (without refitting bounds)
   useEffect(() => {
     if (isMapVisible && isInitializedRef.current && hasFitBoundsRef.current) {
       updateMarkers(false);
     }
-  }, [isMapVisible, updateMarkers]);
+  }, [closestServices]);
 
   // Cleanup on unmount
   useEffect(() => {
