@@ -1,6 +1,5 @@
 import { ServiceCard } from "@/components/service-card";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,14 +67,14 @@ export function ServiceResultsRail({
           >
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm text-slate-600">
-                Scroll to see more services →
+                Scroll horizontally to see more services →
               </p>
               <span className="text-xs text-slate-500">
                 {services.length} result{services.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4" data-testid={`${dataTestIdPrefix}-rail-compact`}>
+            <div className="overflow-x-auto overflow-y-hidden -mx-4 px-4">
+              <div className="flex gap-4 pb-4 min-w-min" data-testid={`${dataTestIdPrefix}-rail-compact`}>
                 {services.map((service) => (
                   <motion.div
                     key={service.id}
@@ -89,9 +88,9 @@ export function ServiceResultsRail({
                   </motion.div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
             {/* Fade gradient to indicate more content */}
-            <div className="absolute right-0 top-12 bottom-16 w-20 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-12 bottom-16 w-24 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none" />
           </motion.div>
         ) : (
           <motion.div
