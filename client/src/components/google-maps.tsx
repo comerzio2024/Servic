@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Map, ZoomIn, ZoomOut, X } from "lucide-react";
@@ -29,6 +29,7 @@ export function GoogleMaps({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const isInitializedRef = useRef(false);
 
   // Filter and sort services
   const closestServices = services
@@ -36,43 +37,8 @@ export function GoogleMaps({
     .sort((a, b) => (a.distance || 0) - (b.distance || 0))
     .slice(0, maxServices);
 
-  // Initialize map
-  useEffect(() => {
-    if (!isMapVisible || !mapContainerRef.current || mapRef.current || !apiKey) return;
-
-    const win = window as GoogleMapsWindow;
-
-    // Load Google Maps script if not already loaded
-    if (!win.google) {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initializeMap;
-      document.head.appendChild(script);
-    } else {
-      initializeMap();
-    }
-
-    function initializeMap() {
-      const google = (window as GoogleMapsWindow).google;
-      if (!google || !mapContainerRef.current) return;
-
-      const map = new google.maps.Map(mapContainerRef.current as any, {
-        zoom: 12,
-        center: { lat: userLocation!.lat, lng: userLocation!.lng },
-        mapTypeControl: false,
-        fullscreenControl: false,
-        streetViewControl: false,
-      });
-
-      mapRef.current = map;
-      updateMarkers();
-    }
-  }, [isMapVisible, apiKey, userLocation]);
-
   // Update markers when services change
-  const updateMarkers = () => {
+  const updateMarkers = useCallback(() => {
     const google = (window as GoogleMapsWindow).google;
     if (!google || !mapRef.current || !userLocation) return;
 
@@ -157,14 +123,50 @@ export function GoogleMaps({
     if (closestServices.length > 0) {
       mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
     }
-  };
+  }, [userLocation, closestServices]);
 
-  // Update markers when services change
+  // Initialize map only once when it becomes visible
   useEffect(() => {
-    if (isMapVisible && mapRef.current) {
+    if (!isMapVisible || !mapContainerRef.current || isInitializedRef.current || !apiKey) return;
+
+    const win = window as GoogleMapsWindow;
+
+    function initializeMap() {
+      const google = (window as GoogleMapsWindow).google;
+      if (!google || !mapContainerRef.current || !userLocation) return;
+
+      const map = new google.maps.Map(mapContainerRef.current as any, {
+        zoom: 12,
+        center: { lat: userLocation.lat, lng: userLocation.lng },
+        mapTypeControl: false,
+        fullscreenControl: false,
+        streetViewControl: false,
+      });
+
+      mapRef.current = map;
+      isInitializedRef.current = true;
       updateMarkers();
     }
-  }, [closestServices, isMapVisible, userLocation]);
+
+    // Load Google Maps script if not already loaded
+    if (!win.google) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeMap;
+      document.head.appendChild(script);
+    } else {
+      initializeMap();
+    }
+  }, [isMapVisible, apiKey]);
+
+  // Update markers when services or location change
+  useEffect(() => {
+    if (isMapVisible && isInitializedRef.current) {
+      updateMarkers();
+    }
+  }, [isMapVisible, updateMarkers]);
 
   // Cleanup on unmount
   useEffect(() => {
