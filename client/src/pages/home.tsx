@@ -384,7 +384,7 @@ export default function Home() {
     });
   };
 
-  const { data: nearbyServices = [], isLoading: nearbyLoading } = useQuery<Array<ServiceWithDetails & { distance: number }>>({
+  const { data: nearbyData = [], isLoading: nearbyLoading } = useQuery<Array<ServiceWithDetails & { distance: number }>>({
     queryKey: ["/api/services/nearby", searchLocation, radiusKm],
     queryFn: () => apiRequest("/api/services/nearby", {
       method: "POST",
@@ -400,6 +400,19 @@ export default function Home() {
     }),
     enabled: !!searchLocation,
   });
+
+  const nearbyServices = useMemo(() => {
+    if (!searchLocation || nearbyLoading) return [];
+    
+    let filtered = nearbyData || [];
+    
+    // Filter by selected category
+    if (selectedCategory) {
+      filtered = filtered.filter(service => service.categoryId === selectedCategory);
+    }
+    
+    return filtered;
+  }, [nearbyData, searchLocation, nearbyLoading, selectedCategory]);
 
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return services;
@@ -796,7 +809,7 @@ export default function Home() {
               <TabsTrigger value="saved" className="gap-2" data-testid="tab-saved-listings">
                 <Heart className="w-4 h-4" />
                 Saved Listings
-                <Badge variant="secondary" className="ml-1">{favorites?.length || 0}</Badge>
+                <Badge variant="secondary" className="ml-1">{filteredSavedListings.length}</Badge>
               </TabsTrigger>
             </TabsList>
 

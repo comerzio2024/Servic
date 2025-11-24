@@ -568,7 +568,8 @@ export default function Profile() {
           <Tabs 
             value={activeTab} 
             onValueChange={(value) => {
-              setLocation(`/profile?tab=${value}`);
+              setActiveTab(value); // Set state first
+              setLocation(`/profile?tab=${value}`); // Then update URL
             }} 
             className="w-full"
           >
@@ -959,6 +960,102 @@ export default function Profile() {
                             data-testid="button-save-address"
                           >
                             {updateAddressMutation.isPending ? "Saving..." : "Save Address"}
+                          </Button>
+                          <Button
+                            type="button" 
+                            variant="outline" 
+                            onClick={cancelAddressForm}
+                            data-testid="button-cancel-address"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : showAddressForm ? (
+                      <form onSubmit={handleAddressSubmit} className="border rounded-lg p-4 space-y-4 bg-slate-50">
+                        <div>
+                          <Label htmlFor="label">Label</Label>
+                          <Input
+                            id="label"
+                            value={addressForm.label}
+                            onChange={(e) => setAddressForm({...addressForm, label: e.target.value})}
+                            placeholder="e.g., Home, Office"
+                            data-testid="input-address-label"
+                          />
+                        </div>
+                        <div>
+                          <AddressAutocomplete
+                            label="Street Address"
+                            required
+                            onAddressSelect={(address) => {
+                              if (address) {
+                                setAddressForm({
+                                  ...addressForm,
+                                  street: address.street,
+                                  city: address.city,
+                                  postalCode: address.postalCode,
+                                  canton: address.canton,
+                                });
+                                setIsAddressValidated(true);
+                              } else {
+                                setIsAddressValidated(false);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="postalCode">Postal Code</Label>
+                            <Input
+                              id="postalCode"
+                              value={addressForm.postalCode}
+                              onChange={(e) => setAddressForm({...addressForm, postalCode: e.target.value})}
+                              placeholder="e.g., 8000"
+                              data-testid="input-address-postalCode"
+                              disabled
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="city">City</Label>
+                            <Input
+                              id="city"
+                              value={addressForm.city}
+                              onChange={(e) => setAddressForm({...addressForm, city: e.target.value})}
+                              placeholder="e.g., Zurich"
+                              data-testid="input-address-city"
+                              disabled
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="canton">Canton</Label>
+                          <Input
+                            id="canton"
+                            value={addressForm.canton}
+                            onChange={(e) => setAddressForm({...addressForm, canton: e.target.value})}
+                            placeholder="e.g., Zurich"
+                            data-testid="input-address-canton"
+                            disabled
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="isPrimary"
+                            type="checkbox"
+                            checked={addressForm.isPrimary}
+                            onChange={(e) => setAddressForm({...addressForm, isPrimary: e.target.checked})}
+                            className="w-4 h-4"
+                            data-testid="checkbox-address-isPrimary"
+                          />
+                          <Label htmlFor="isPrimary">Set as primary address</Label>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="submit" 
+                            disabled={!isAddressValidated || createAddressMutation.isPending}
+                            data-testid="button-save-address"
+                          >
+                            {createAddressMutation.isPending ? "Saving..." : "Save Address"}
                           </Button>
                           <Button
                             type="button" 
