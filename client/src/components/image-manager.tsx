@@ -389,24 +389,21 @@ export function ImageManager({
       {/* Image grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {images.map((img, idx) => (
               <motion.div
-                key={`${idx}-${img}`}
+                key={img}
                 layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ 
-                  layout: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.2 }
-                }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2, layout: { type: "spring", stiffness: 300, damping: 30 } }}
                 draggable
                 onDragStart={() => handleDragStart(idx)}
                 onDragOver={(e) => handleDragOver(e, idx)}
                 onDragEnd={handleDragEnd}
-                className={`relative group cursor-move transition-opacity ${
-                  draggedIndex === idx ? 'opacity-30 scale-95' : ''
+                className={`relative group cursor-move transition-all ${
+                  draggedIndex === idx ? 'opacity-40 scale-95' : ''
                 }`}
                 data-testid={`image-preview-${idx}`}
               >
