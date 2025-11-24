@@ -76,7 +76,8 @@ export function CategoryFilterBar({
                     )}
                     data-testid="category-filter-all"
                   >
-                    All
+                    <Sparkles className="w-3.5 h-3.5" />
+                    All Services
                   </motion.button>
 
                   {/* Category Buttons - Name Only */}
