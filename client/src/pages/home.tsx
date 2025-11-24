@@ -1,6 +1,5 @@
 import { Layout } from "@/components/layout";
 import { ServiceCard } from "@/components/service-card";
-import { ServiceResultsRail } from "@/components/service-results-rail";
 import { GoogleMaps } from "@/components/google-maps";
 import { StickyCategoryBar } from "@/components/sticky-category-bar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,10 @@ export default function Home() {
   const [useLocationPermissions, setUseLocationPermissions] = useState(false);
   const locationPermissionProcessingRef = useRef(false);
   
+  const [nearbyMode, setNearbyMode] = useState<'slider' | 'grid'>('slider');
+  const [nearbyPage, setNearbyPage] = useState(1);
+  const NEARBY_ITEMS_PER_PAGE = 12;
+  
   // Independent state for All Listings tab
   const [allListingsCategory, setAllListingsCategory] = useState<string | null>(null);
   const [allListingsSort, setAllListingsSort] = useState<SortOption>("newest");
@@ -50,6 +53,12 @@ export default function Home() {
   // Independent state for Saved Listings tab
   const [savedListingsCategory, setSavedListingsCategory] = useState<string | null>(null);
   const [savedListingsSort, setSavedListingsSort] = useState<SortOption>("newest");
+  
+  // Pagination state for All Listings and Saved Listings
+  const [allListingsPage, setAllListingsPage] = useState(1);
+  const [savedListingsPage, setSavedListingsPage] = useState(1);
+  const ALL_LISTINGS_PER_PAGE = 16; // 4 rows × 4 columns
+  const SAVED_LISTINGS_PER_PAGE = 16; // 4 rows × 4 columns
   
   // Use shared geocoding hook for location search
   const { 
@@ -81,6 +90,20 @@ export default function Home() {
   useEffect(() => {
     setAllListingsCategory(selectedCategory);
   }, [selectedCategory]);
+
+  // Reset page when category filter changes
+  useEffect(() => {
+    setAllListingsPage(1);
+  }, [allListingsCategory]);
+
+  useEffect(() => {
+    setSavedListingsPage(1);
+  }, [savedListingsCategory]);
+
+  // Reset nearby page when category or radius changes
+  useEffect(() => {
+    setNearbyPage(1);
+  }, [selectedCategory, radiusKm]);
 
   // Auto-load user's saved location on mount (works for all users with stored location)
   useEffect(() => {
@@ -414,6 +437,14 @@ export default function Home() {
     return filtered;
   }, [nearbyData, searchLocation, nearbyLoading, selectedCategory]);
 
+  const paginatedNearbyServices = useMemo(() => {
+    if (nearbyMode === 'slider') return nearbyServices;
+    const startIndex = (nearbyPage - 1) * NEARBY_ITEMS_PER_PAGE;
+    return nearbyServices.slice(startIndex, startIndex + NEARBY_ITEMS_PER_PAGE);
+  }, [nearbyServices, nearbyMode, nearbyPage, NEARBY_ITEMS_PER_PAGE]);
+
+  const nearbyTotalPages = Math.ceil(nearbyServices.length / NEARBY_ITEMS_PER_PAGE);
+
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return services;
     return services.filter(service => service.categoryId === selectedCategory);
@@ -500,6 +531,46 @@ export default function Home() {
     });
     return counts;
   }, [favorites]);
+
+  // Pagination logic for All Listings
+  const paginatedAllListings = useMemo(() => {
+    const startIndex = (allListingsPage - 1) * ALL_LISTINGS_PER_PAGE;
+    return filteredAllListings.slice(startIndex, startIndex + ALL_LISTINGS_PER_PAGE);
+  }, [filteredAllListings, allListingsPage, ALL_LISTINGS_PER_PAGE]);
+
+  const allListingsTotalPages = Math.ceil(filteredAllListings.length / ALL_LISTINGS_PER_PAGE);
+
+  // Pagination logic for Saved Listings
+  const paginatedSavedListings = useMemo(() => {
+    const startIndex = (savedListingsPage - 1) * SAVED_LISTINGS_PER_PAGE;
+    return filteredSavedListings.slice(startIndex, startIndex + SAVED_LISTINGS_PER_PAGE);
+  }, [filteredSavedListings, savedListingsPage, SAVED_LISTINGS_PER_PAGE]);
+
+  const savedListingsTotalPages = Math.ceil(filteredSavedListings.length / SAVED_LISTINGS_PER_PAGE);
+
+  // Reset All Listings page if current page exceeds available pages
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredAllListings.length / ALL_LISTINGS_PER_PAGE));
+    if (allListingsPage > maxPage) {
+      setAllListingsPage(maxPage);
+    }
+  }, [filteredAllListings.length, allListingsPage]);
+
+  // Reset Saved Listings page if current page exceeds available pages
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredSavedListings.length / SAVED_LISTINGS_PER_PAGE));
+    if (savedListingsPage > maxPage) {
+      setSavedListingsPage(maxPage);
+    }
+  }, [filteredSavedListings.length, savedListingsPage]);
+
+  // Reset nearby page if current page exceeds available pages
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(nearbyServices.length / NEARBY_ITEMS_PER_PAGE));
+    if (nearbyPage > maxPage) {
+      setNearbyPage(maxPage);
+    }
+  }, [nearbyServices.length, nearbyPage]);
 
   return (
     <Layout>
@@ -724,14 +795,27 @@ export default function Home() {
       {searchLocation && (
         <section className="py-12 container mx-auto px-4">
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                <MapPin className="w-6 h-6 text-primary" />
-                Services Near {searchLocation.name}
-              </h2>
-              <p className="text-slate-600 text-sm mb-6">
-                Showing services within {radiusKm} km of your selected location
-              </p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                  <MapPin className="w-6 h-6 text-primary" />
+                  Services Near {searchLocation.name}
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  Showing services within {radiusKm} km of your selected location
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setNearbyMode(nearbyMode === 'slider' ? 'grid' : 'slider');
+                  setNearbyPage(1);
+                }}
+                data-testid="button-nearby-mode-toggle"
+              >
+                {nearbyMode === 'slider' ? 'Expand' : 'Collapse'}
+              </Button>
             </div>
             
             <GoogleMaps 
@@ -742,15 +826,65 @@ export default function Home() {
               apiKey={mapsConfig?.apiKey || ""}
             />
             
-            <ServiceResultsRail
-              services={nearbyServices}
-              isLoading={nearbyLoading}
-              emptyMessage={`No services found within ${radiusKm} km`}
-              emptyDescription="Try increasing the search radius to discover more services"
-              isExpanded={isNearbyExpanded}
-              onExpandChange={setIsNearbyExpanded}
-              dataTestIdPrefix="nearby"
-            />
+            {nearbyLoading ? (
+              <div className="text-center py-20">
+                <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                  <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Loading nearby services...</h3>
+              </div>
+            ) : nearbyServices.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                  <MapPin className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">No services found within {radiusKm} km</h3>
+                <p className="text-slate-500">Try increasing the search radius to discover more services</p>
+              </div>
+            ) : nearbyMode === 'slider' ? (
+              <ScrollArea className="w-full">
+                <div className="flex gap-4 pb-4">
+                  {nearbyServices.map((service) => (
+                    <div key={service.id} className="w-80 flex-shrink-0" data-testid={`nearby-service-slider-${service.id}`}>
+                      <ServiceCard service={service} />
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {paginatedNearbyServices.map((service) => (
+                    <ServiceCard key={service.id} service={service} data-testid={`nearby-service-grid-${service.id}`} />
+                  ))}
+                </div>
+                {nearbyTotalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNearbyPage(p => Math.max(1, p - 1))}
+                      disabled={nearbyPage === 1}
+                      data-testid="button-nearby-prev-page"
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-slate-600" data-testid="text-nearby-page-info">
+                      Page {nearbyPage} of {nearbyTotalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNearbyPage(p => Math.min(nearbyTotalPages, p + 1))}
+                      disabled={nearbyPage === nearbyTotalPages}
+                      data-testid="button-nearby-next-page"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -818,18 +952,38 @@ export default function Home() {
                     <h3 className="text-lg font-semibold text-slate-900">Loading services...</h3>
                   </div>
                 ) : filteredAllListings.length > 0 ? (
-                  <ServiceResultsRail
-                    services={filteredAllListings}
-                    isLoading={false}
-                    emptyMessage={allListingsCategory ? 'No services in this category yet' : 'No services found'}
-                    emptyDescription={allListingsCategory ? 'Try selecting a different category or check back later' : 'Check back later for new services'}
-                    isExpanded={isAllListingsExpanded}
-                    onExpandChange={setIsAllListingsExpanded}
-                    dataTestIdPrefix="all-listings"
-                    maxRows={3}
-                    columnsPerRow={4}
-                    alwaysUseGrid={true}
-                  />
+                  <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {paginatedAllListings.map((service) => (
+                        <ServiceCard key={service.id} service={service} data-testid={`all-listings-service-${service.id}`} />
+                      ))}
+                    </div>
+                    {allListingsTotalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-8">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAllListingsPage(p => Math.max(1, p - 1))}
+                          disabled={allListingsPage === 1}
+                          data-testid="button-all-listings-prev-page"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-slate-600" data-testid="text-all-listings-page-info">
+                          Page {allListingsPage} of {allListingsTotalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAllListingsPage(p => Math.min(allListingsTotalPages, p + 1))}
+                          disabled={allListingsPage === allListingsTotalPages}
+                          data-testid="button-all-listings-next-page"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
                     <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
@@ -891,18 +1045,38 @@ export default function Home() {
                   
                   <div className="mt-6">
                     {filteredSavedListings.length > 0 ? (
-                      <ServiceResultsRail
-                        services={filteredSavedListings}
-                        isLoading={false}
-                        emptyMessage="No saved services"
-                        emptyDescription="Start saving services you like to see them here"
-                        isExpanded={isSavedListingsExpanded}
-                        onExpandChange={setIsSavedListingsExpanded}
-                        dataTestIdPrefix="saved-listings"
-                        maxRows={3}
-                        columnsPerRow={4}
-                        alwaysUseGrid={true}
-                      />
+                      <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {paginatedSavedListings.map((service) => (
+                            <ServiceCard key={service.id} service={service} data-testid={`saved-listings-service-${service.id}`} />
+                          ))}
+                        </div>
+                        {savedListingsTotalPages > 1 && (
+                          <div className="flex justify-center items-center gap-2 mt-8">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSavedListingsPage(p => Math.max(1, p - 1))}
+                              disabled={savedListingsPage === 1}
+                              data-testid="button-saved-listings-prev-page"
+                            >
+                              Previous
+                            </Button>
+                            <span className="text-sm text-slate-600" data-testid="text-saved-listings-page-info">
+                              Page {savedListingsPage} of {savedListingsTotalPages}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSavedListingsPage(p => Math.min(savedListingsTotalPages, p + 1))}
+                              disabled={savedListingsPage === savedListingsTotalPages}
+                              data-testid="button-saved-listings-next-page"
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
                         <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
