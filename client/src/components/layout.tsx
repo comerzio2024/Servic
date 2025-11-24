@@ -17,12 +17,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // Smart navigation function for profile tabs
   const navigateToProfile = (tab?: string) => {
-    // Use wouter's setLocation to ensure proper tab switching
-    if (tab) {
-      setLocation(`/profile?tab=${tab}`);
-    } else {
-      setLocation('/profile');
-    }
+    // Always include tab parameter so URL actually changes and triggers re-render
+    const tabToUse = tab || 'profile';
+    setLocation(`/profile?tab=${tabToUse}`);
   };
 
   return (
