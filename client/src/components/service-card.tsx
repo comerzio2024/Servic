@@ -193,12 +193,9 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
               <span className="text-muted-foreground">({service.reviewCount})</span>
             </div>
 
-            <div className="flex items-baseline gap-1 min-w-0">
+            <div className="flex items-baseline gap-0.5 min-w-0">
               {service.priceType === 'fixed' && (
-                <>
-                  <span className="text-base font-bold text-primary whitespace-nowrap">CHF {service.price}</span>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">/{service.priceUnit}</span>
-                </>
+                <span className="text-base font-bold text-primary whitespace-nowrap">CHF {service.price} / {service.priceUnit}</span>
               )}
               {service.priceType === 'text' && (
                 <span className="text-xs font-semibold text-primary underline underline-offset-2">
@@ -329,13 +326,10 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
       </CardContent>
 
       {/* Pricing section - FULL WIDTH, separate line with responsive font sizing */}
-      <div className="flex items-center justify-between gap-3 px-3 sm:px-4 md:px-5 py-3 border-t border-border/50 bg-muted/30 min-w-0">
-        <div className="flex items-baseline gap-1.5 flex-wrap min-w-0 flex-1">
+      <div className="flex items-center gap-3 px-3 sm:px-4 md:px-5 py-3 border-t border-border/50 bg-muted/30 min-w-0">
+        <div className="flex items-baseline min-w-0 flex-1">
           {service.priceType === 'fixed' && (
-            <>
-              <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary whitespace-nowrap">CHF {service.price}</span>
-              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{service.priceUnit}</span>
-            </>
+            <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary whitespace-nowrap">CHF {service.price} <span className="text-xs sm:text-sm text-muted-foreground">/ {service.priceUnit}</span></span>
           )}
           {service.priceType === 'text' && (
             <Link href={`/service/${service.id}`} className="text-sm sm:text-base md:text-lg font-semibold text-primary hover:text-primary/80 underline underline-offset-4 transition-colors">
@@ -346,7 +340,6 @@ export function ServiceCard({ service, compact = false, isSaved: initialIsSaved 
             <span className="text-sm sm:text-base md:text-lg font-medium text-foreground whitespace-nowrap">From CHF {(service.priceList as any)?.[0]?.price || 'N/A'}</span>
           )}
         </div>
-        <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">{service.priceType}</Badge>
       </div>
 
       {/* User section - FULL WIDTH, separate line */}
