@@ -112,6 +112,19 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
   
+  /* Platform-wide text overflow prevention */
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
+  /* Prevent text overflow in common text elements */
+  p, span, div, a, button, label, input, textarea {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  
   /* Custom scrollbar styling for all scrollable elements */
   *::-webkit-scrollbar {
     width: 8px;
