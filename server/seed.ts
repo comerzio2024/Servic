@@ -1052,6 +1052,7 @@ export async function seedDatabase() {
         viewCount: 312,
         images: ["https://picsum.photos/seed/computer-repair/800/600"],
         tags: ["computer", "repair", "it support"],
+        hashtags: ["computer", "repair", "itsupport"],
       },
       {
         id: "demo-service-44",
@@ -1109,13 +1110,27 @@ export async function seedDatabase() {
       },
     ];
 
-    for (const service of SAMPLE_SERVICES) {
+    // Auto-generate hashtags from tags for services that don't have them
+    const servicesWithHashtags = SAMPLE_SERVICES.map(service => ({
+      ...service,
+      hashtags: service.hashtags || service.tags.map(tag => tag.toLowerCase().replace(/\s+/g, ''))
+    }));
+
+    for (const service of servicesWithHashtags) {
       const existing = await db.select().from(services).where(eq(services.id, service.id));
       if (existing.length === 0) {
         await db.insert(services).values(service);
         console.log(`Created service: ${service.title}`);
       } else {
-        console.log(`Service already exists: ${service.title}`);
+        // Update existing service with hashtags if missing
+        if (!existing[0].hashtags || existing[0].hashtags.length === 0) {
+          await db.update(services)
+            .set({ hashtags: service.hashtags })
+            .where(eq(services.id, service.id));
+          console.log(`Updated hashtags for: ${service.title}`);
+        } else {
+          console.log(`Service already exists: ${service.title}`);
+        }
       }
     }
 

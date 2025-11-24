@@ -284,7 +284,7 @@ function ServiceDetailContent({ serviceId }: { serviceId: string }) {
                           <Link
                             key={tag}
                             href={`/hashtags/${tag}`}
-                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200 cursor-pointer"
                             data-testid={`hashtag-${tag}`}
                           >
                             <Hash className="w-3.5 h-3.5 mr-1" />
