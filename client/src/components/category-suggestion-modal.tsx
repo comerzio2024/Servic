@@ -72,12 +72,21 @@ export function CategorySuggestionModal({ open, onOpenChange, onCategoryCreated 
         method: "POST",
         body: JSON.stringify(data),
       }),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-      toast({
-        title: "Category Created!",
-        description: "Your category has been created successfully.",
-      });
+      
+      if (data.isExistingCategory) {
+        toast({
+          title: "Category Found!",
+          description: data.message || `Using the existing category "${data.name}".`,
+        });
+      } else {
+        toast({
+          title: "Category Created!",
+          description: "Your category has been created successfully.",
+        });
+      }
+      
       if (onCategoryCreated) {
         onCategoryCreated(data.id);
       }

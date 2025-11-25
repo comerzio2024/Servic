@@ -20,7 +20,7 @@ import {
 import { categorizeService } from "./aiService";
 import { getAdminAssistance } from "./aiAdminService";
 import { getUserSupport } from "./aiUserSupportService";
-import { validateCategoryName, suggestCategoryAlternative } from "./aiCategoryService";
+import { validateCategoryName, suggestCategoryAlternative, findSimilarCategoryName } from "./aiCategoryService";
 import { 
   analyzeImagesForHashtags, 
   generateServiceTitle, 
@@ -1346,18 +1346,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Category name is required" });
       }
       
-      // Validate category name for duplicates and appropriateness
-      const validation = await validateCategoryName(categoryName);
-      if (!validation.isValid) {
-        return res.status(400).json({ message: validation.message });
+      // First check if a similar category already exists
+      const allCategories = await storage.getCategories();
+      const similarMatch = findSimilarCategoryName(categoryName, 
+        allCategories.map(c => ({ name: c.name, id: c.id }))
+      );
+      
+      if (similarMatch.similarity > 0.8) {
+        // A very similar category exists, suggest using it
+        return res.status(200).json({
+          id: similarMatch.category!.id,
+          name: similarMatch.category!.name,
+          isExistingCategory: true,
+          message: `We found an existing category "${similarMatch.category!.name}" that matches your suggestion. Using it instead.`,
+          similarity: similarMatch.similarity
+        });
       }
       
-      if (validation.isDuplicate || (validation.similarity && validation.similarity > 0.7)) {
-        return res.status(409).json({ 
-          message: `A similar category "${categoryName}" already exists. Please use that instead or choose a different name.`,
-          isDuplicate: true,
-          similarity: validation.similarity
-        });
+      if (similarMatch.similarity > 0.75) {
+        // A similar category exists, warn but allow creation
+        console.log(`Creating category "${categoryName}" despite similarity to "${similarMatch.category?.name}" (${similarMatch.similarity.toFixed(2)})`);
+      }
+      
+      // Validate category name for appropriateness
+      const validation = await validateCategoryName(categoryName);
+      if (!validation.isValid && validation.confidence > 0.6) {
+        return res.status(400).json({ message: validation.reasoning });
       }
       
       // Set expiry to 24 hours from now
@@ -1371,7 +1385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const tempCategory = await storage.createTemporaryCategory(validated);
-      res.status(201).json({ ...tempCategory, isNewCategory: true });
+      res.status(201).json({ ...tempCategory, isNewCategory: true, isExistingCategory: false });
     } catch (error: any) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: fromZodError(error).message });
