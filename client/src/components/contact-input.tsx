@@ -103,7 +103,7 @@ export function ContactInput({
     }
   };
 
-  const validateValue = (type: "phone" | "email", value: string): boolean => {
+  const validateValue = (type: "phone" | "email", value: string): boolean | { isValid: boolean; message: string } => {
     if (!value) return false;
     if (type === "email") {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -111,10 +111,17 @@ export function ContactInput({
     // Swiss phone number validation: must start with +41 and have 9-13 digits after
     // Formats: +41 44 123 4567, +41441234567, +41 79 123 45 67
     const swissPhoneRegex = /^\+41\s?(\d{2}\s?\d{3}\s?\d{2}\s?\d{2}|\d{9,11})$/;
-    return swissPhoneRegex.test(value.replace(/\s/g, ''));
+    const cleanedValue = value.replace(/\s/g, '');
+    const isValid = swissPhoneRegex.test(cleanedValue);
+    return {
+      isValid,
+      message: isValid ? "" : "Phone must be in format: +41 44 123 4567 or +41441234567"
+    };
   };
 
-  const isValueValid = validateValue(contact.contactType, contact.value);
+  const validationResult = validateValue(contact.contactType, contact.value);
+  const isValueValid = typeof validationResult === 'boolean' ? validationResult : validationResult.isValid;
+  const validationMessage = typeof validationResult === 'object' ? validationResult.message : "";
 
   return (
     <div className="border rounded-lg p-4 space-y-4" data-testid={`contact-input-${index}`}>
@@ -184,7 +191,7 @@ export function ContactInput({
           />
           {!isValueValid && contact.value && (
             <p className="text-sm text-red-500">
-              Please enter a valid {contact.contactType === "phone" ? "phone number" : "email address"}
+              {validationMessage || `Please enter a valid ${contact.contactType === "phone" ? "phone number" : "email address"}`}
             </p>
           )}
         </div>

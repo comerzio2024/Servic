@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend Architecture
 
-**Technology Stack:** Node.js with TypeScript (ESM), Express.js, Drizzle ORM, PostgreSQL (Neon serverless), Replit Auth (OpenID Connect), connect-pg-simple for session storage, and OpenAI API (GPT-5).
+**Technology Stack:** Node.js with TypeScript (ESM), Express.js, Drizzle ORM, PostgreSQL (Neon serverless), Replit Auth (OpenID Connect), connect-pg-simple for session storage, and OpenAI API (GPT-4o).
 
 **Design Decisions:**
 - **ORM:** Drizzle ORM provides type-safe SQL queries and lightweight database interaction.
@@ -68,13 +68,32 @@ Preferred communication style: Simple, everyday language.
 - **Monorepo:** Client, server, and shared code in a single repository with TypeScript path mapping.
 - **Optimization:** Separate build tools for client (Vite) and server (esbuild).
 
+## Recent Updates & Features
+
+### Service Form Improvements (Latest)
+- **Promotional Packages:** Service-level packages (Standard Free, Featured CHF 9.99, Premium CHF 19.99) and account-wide plans (Professional Badge CHF 5/mo, Pro Account CHF 29/mo) with expandable collapsible section
+- **Location Preselection:** User's main address is auto-selected when posting a new service
+- **Contact Name Prepopulation:** Service contact name field auto-fills with user's name
+- **AI-Enhanced Form:**
+  - Description generator with GPT-4o integration
+  - Hashtag suggestions from image analysis
+  - Category duplicate detection via AI validation
+- **Swiss Address Validation:** Fixed validation for addresses with 4-digit postal codes (e.g., "Farman-Strasse, 8152, Glattbrugg")
+- **Smart Error Messages:** Error toasts now point users to specific form tabs and field issues
+- **Phone Number Guidance:** Specific format guidance for Swiss phone numbers (+41 format)
+
+### Tab Organization (Latest)
+- **Tab 1: Main Info** - Images, title, description, category, hashtags
+- **Tab 2: Location & Contacts** - Service locations with validation, contact information with name prepopulation
+- **Tab 3: Pricing & Plans** - Pricing options, promotional packages with expandable account plans section
+
 ## External Dependencies
 
 ### Third-Party Services
 
 - **Replit Auth (OpenID Connect):** User authentication and session management. Configured via `ISSUER_URL`, `REPL_ID`, `SESSION_SECRET`.
 - **Neon Serverless PostgreSQL:** Primary database. Configured via `DATABASE_URL`.
-- **OpenAI API:** AI-powered service categorization. Configured via `OPENAI_API_KEY`.
+- **OpenAI API:** AI-powered service categorization, description generation, hashtag analysis, and category validation. Configured via `OPENAI_API_KEY`. Uses GPT-4o model.
 
 ### Development Tools
 

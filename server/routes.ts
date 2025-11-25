@@ -243,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Format temporary categories to match category structure
         const formattedTempCategories = tempCategories.map(tc => ({
           id: tc.id,
-          name: `${tc.name} (Temporary)`,
+          name: tc.name,
           slug: tc.slug,
           icon: tc.icon,
           createdAt: tc.createdAt,
@@ -1425,7 +1425,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validated = schema.parse(req.body);
       const result = await validateSwissAddress(validated.address);
-      res.json(result);
+      // Ensure consistent response format
+      res.json({
+        isValid: result.isValid,
+        formattedAddress: result.formattedAddress,
+        message: result.message,
+      });
     } catch (error: any) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: fromZodError(error).message });

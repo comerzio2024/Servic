@@ -108,6 +108,12 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
     enabled: !!service?.id && open && isEditMode,
   });
 
+  const { data: userAddresses = [] } = useQuery({
+    queryKey: ["/api/users/me/addresses"],
+    queryFn: () => apiRequest("/api/users/me/addresses"),
+    enabled: !isEditMode && open,
+  });
+
   // Track modal open/close state (only in create mode)
   useEffect(() => {
     if (!isEditMode) {
@@ -206,41 +212,64 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
     }
   }, [existingContacts, isEditMode, service, open, formData]);
 
-  // Initialize contacts with user's profile data (only in create mode)
+  // Initialize contacts and locations with user's profile data (only in create mode)
   useEffect(() => {
-    if (isEditMode || !user || !open || !formData || formData.contacts?.length > 0) return;
+    if (isEditMode || !user || !open || !formData) return;
     
-    const initialContacts: Contact[] = [];
+    let hasChanges = false;
+    const updates: Partial<FormData> = {};
     
-    if (user.phoneNumber) {
-      initialContacts.push({
-        contactType: "phone",
-        value: user.phoneNumber,
-        name: `${user.firstName} ${user.lastName}`.trim() || undefined,
-        isPrimary: true,
-        isVerified: user.phoneVerified,
-      });
+    // Initialize locations with user's main address
+    if (formData.locations.length === 0 && userAddresses.length > 0) {
+      const mainAddress = userAddresses.find((a: any) => a.isMain) || userAddresses[0];
+      if (mainAddress) {
+        updates.locations = [mainAddress.fullAddress];
+        hasChanges = true;
+      }
     }
     
-    if (user.email) {
-      initialContacts.push({
-        contactType: "email",
-        value: user.email,
-        isPrimary: initialContacts.length === 0,
-        isVerified: user.emailVerified,
-      });
+    // Initialize contacts with user's profile data
+    if (formData.contacts.length === 0) {
+      const initialContacts: Contact[] = [];
+      const userName = `${user.firstName} ${user.lastName}`.trim();
+      
+      if (user.phoneNumber) {
+        initialContacts.push({
+          contactType: "phone",
+          value: user.phoneNumber,
+          name: userName || undefined,
+          isPrimary: true,
+          isVerified: user.phoneVerified,
+        });
+      }
+      
+      if (user.email) {
+        initialContacts.push({
+          contactType: "email",
+          value: user.email,
+          name: userName || undefined,
+          isPrimary: initialContacts.length === 0,
+          isVerified: user.emailVerified,
+        });
+      }
+      
+      if (initialContacts.length === 0) {
+        initialContacts.push({
+          contactType: "email",
+          value: "",
+          name: userName || undefined,
+          isPrimary: true,
+        });
+      }
+      
+      updates.contacts = initialContacts;
+      hasChanges = true;
     }
     
-    if (initialContacts.length === 0) {
-      initialContacts.push({
-        contactType: "email",
-        value: "",
-        isPrimary: true,
-      });
+    if (hasChanges) {
+      setFormData((prev: FormData | null) => ({ ...prev!, ...updates }));
     }
-    
-    setFormData((prev: FormData | null) => ({ ...prev!, contacts: initialContacts }));
-  }, [user, open, formData, isEditMode]);
+  }, [user, open, formData, isEditMode, userAddresses]);
 
   const createServiceMutation = useMutation({
     mutationFn: async ({ data, status }: { data: typeof formData; status: "draft" | "active" }) => {
@@ -558,8 +587,8 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
             body: JSON.stringify({ address: location }),
           });
 
-          if (!result.isSwiss) {
-            errors.push(`"${location}" is not a valid Swiss address. ${result.suggestion || ""}`);
+          if (!result.isValid) {
+            errors.push(`"${location}" is not a valid Swiss address. Please ensure it includes a Swiss postal code or city.`);
           }
         } catch (error) {
           errors.push(`Failed to validate "${location}"`);
@@ -585,8 +614,8 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
       const addressesValid = await validateAddresses();
       if (!addressesValid) {
         toast({
-          title: "Address Validation Failed",
-          description: "Please correct the address errors below",
+          title: "Address Issue",
+          description: "Check the Location & Contacts tab for address errors",
           variant: "destructive",
         });
         return;
@@ -596,8 +625,8 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
     if (isEditMode) {
       if (validLocations.length === 0) {
         toast({
-          title: "Validation Error",
-          description: "Please provide at least one location",
+          title: "Missing Location",
+          description: "Go to Location & Contacts tab and add at least one service location",
           variant: "destructive",
         });
         return;
@@ -605,8 +634,8 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
 
       if (validContacts.length === 0) {
         toast({
-          title: "Validation Error",
-          description: "Please provide at least one contact",
+          title: "Missing Contact",
+          description: "Go to Location & Contacts tab and add at least one contact method",
           variant: "destructive",
         });
         return;
@@ -617,16 +646,27 @@ export function ServiceFormModal({ open, onOpenChange, onSuggestCategory, servic
         locations: validLocations,
       });
     } else {
-      if (
-        !formData.title ||
-        !formData.description ||
-        !formData.categoryId ||
-        validLocations.length === 0 ||
-        validContacts.length === 0
-      ) {
+      // Collect all validation errors
+      const errors: { field: string; message: string }[] = [];
+      
+      if (!formData.title) errors.push({ field: "title", message: "Service title is required" });
+      if (!formData.description) errors.push({ field: "description", message: "Service description is required" });
+      if (!formData.categoryId) errors.push({ field: "category", message: "Category selection is required" });
+      if (validLocations.length === 0) errors.push({ field: "location", message: "Add at least one service location" });
+      if (validContacts.length === 0) errors.push({ field: "contact", message: "Add at least one contact method" });
+      
+      if (errors.length > 0) {
+        const fieldName = errors[0].field;
+        const fieldLabels: Record<string, string> = {
+          title: "Main Info",
+          description: "Main Info",
+          category: "Main Info",
+          location: "Location & Contacts",
+          contact: "Location & Contacts",
+        };
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields including at least one contact",
+          title: `Check ${fieldLabels[fieldName]} tab`,
+          description: errors[0].message,
           variant: "destructive",
         });
         return;
