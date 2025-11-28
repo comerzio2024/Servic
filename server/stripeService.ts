@@ -50,7 +50,6 @@ let stripe: Stripe | null = null;
 try {
   if (STRIPE_SECRET_KEY && !STRIPE_SECRET_KEY.includes('STUB')) {
     stripe = new Stripe(STRIPE_SECRET_KEY, {
-      apiVersion: '2024-06-20',
       typescript: true,
     });
     console.log('✓ Stripe initialized successfully');

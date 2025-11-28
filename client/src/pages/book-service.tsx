@@ -712,7 +712,7 @@ export default function BookServicePage() {
                   <div className="text-sm text-muted-foreground">
                     <p className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4" />
-                      Base price: {service.currency || 'CHF'} {service.price}/{service.priceUnit || 'service'}
+                      Base price: CHF {service.price}/{service.priceUnit || 'service'}
                     </p>
                   </div>
                 </CardContent>

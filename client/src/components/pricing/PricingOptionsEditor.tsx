@@ -55,12 +55,19 @@ export function PricingOptionsEditor({ serviceId, onUpdate }: PricingOptionsEdit
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOption, setEditingOption] = useState<PricingOption | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    label: string;
+    description: string;
+    price: string;
+    currency: string;
+    billingInterval: 'one_time' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    durationMinutes: string;
+  }>({
     label: '',
     description: '',
     price: '',
     currency: 'CHF',
-    billingInterval: 'one_time' as const,
+    billingInterval: 'one_time',
     durationMinutes: '',
   });
 

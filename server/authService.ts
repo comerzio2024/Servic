@@ -117,7 +117,7 @@ export async function registerUser(data: {
   const newUserReferralCode = await generateUniqueReferralCode();
   
   // Create user
-  const [newUser] = await db
+  const insertResult = await db
     .insert(users)
     .values({
       email: email.toLowerCase(),
@@ -132,6 +132,7 @@ export async function registerUser(data: {
       referredBy,
     })
     .returning();
+  const newUser = insertResult[0];
   
   // Process referral reward if this user was referred
   if (referredBy) {
@@ -629,7 +630,7 @@ export async function upsertOAuthUser(data: {
     const newUserReferralCode = await generateUniqueReferralCode();
     
     // Create new user
-    const [newUser] = await db
+    const oauthInsertResult = await db
       .insert(users)
       .values({
         email: email.toLowerCase(),
@@ -645,7 +646,7 @@ export async function upsertOAuthUser(data: {
       })
       .returning();
     
-    existingUser = newUser;
+    existingUser = oauthInsertResult[0];
     isNewUser = true;
     
     // Process referral reward if this user was referred

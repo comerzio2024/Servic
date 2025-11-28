@@ -37,6 +37,8 @@ interface PriceItem {
 }
 
 interface ImageMetadata {
+  rotation?: number;
+  crop?: { x: number; y: number; width: number; height: number };
   [key: string]: any;
 }
 

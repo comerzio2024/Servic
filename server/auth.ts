@@ -70,8 +70,13 @@ export function getSession() {
     tableName: "sessions",
   });
   
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret || sessionSecret === "change-this-secret-in-production") {
+    console.warn("⚠️  WARNING: SESSION_SECRET is not set or using default value. Set a strong secret in production!");
+  }
+  
   return session({
-    secret: process.env.SESSION_SECRET || "change-this-secret-in-production",
+    secret: sessionSecret || "dev-secret-change-in-production",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,

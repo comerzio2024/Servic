@@ -202,7 +202,7 @@ export async function createAdminUser(data: {
     // Create new admin user
     const passwordHash = await hashPassword(password);
     
-    const [newUser] = await db
+    const result = await db
       .insert(users)
       .values({
         email: email.toLowerCase(),
@@ -214,6 +214,7 @@ export async function createAdminUser(data: {
         emailVerified: true, // Admin accounts are pre-verified
       })
       .returning();
+    const newUser = result[0];
     
     return {
       success: true,

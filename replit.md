@@ -18,94 +18,126 @@ Preferred communication style: Simple, everyday language.
 - **UI/UX:** Utilizes shadcn/ui with the "new-york" style variant for a modern, accessible interface. Styling uses Tailwind CSS with custom design tokens for a "Trustworthy Blue" color scheme.
 - **State Management:** TanStack Query manages all server-side state, integrating 401 handling for authentication.
 - **Type Safety:** Full TypeScript implementation with shared types (`@shared` namespace) ensures consistent API contracts.
-- **Geolocation:** All location fields use centralized geocoding (OpenStreetMap Nominatim API via `lib/geocoding.ts` and `hooks/useGeocoding.ts`) with address autocomplete, verification, and display of verified components. This includes automatic geocoding for service locations using the first location in a service's locations array, ensuring accurate map placements.
-- **Mapping:** Google Maps is exclusively used for all map displays, powered by an admin-configurable API key. Markers are consistently styled (numbered red for services, blue for user locations) with automatic spreading.
+- **Geolocation:** All location fields use centralized geocoding (OpenStreetMap Nominatim API via `lib/geocoding.ts` and `hooks/useGeocoding.ts`) with address autocomplete, verification, and display of verified components.
+- **Mapping:** Google Maps is exclusively used for all map displays, powered by an admin-configurable API key.
 - **Service Display:** Service cards feature interactive image carousels (embla-carousel-react) and maintain equal heights for clean grid alignment.
-- **Text Handling:** Global CSS ensures text overflow prevention with `overflow-wrap: break-word` and `word-break: break-all` for long links.
 - **Hashtags:** Services support clickable hashtags that link to search results pages using SQL array matching.
-- **Home Page:** Features a tabbed interface ("All Listings," "Saved Listings") with independent state for filtering and sorting. Category filtering and sorting controls are integrated, and hero section category buttons instantly filter services. The `/services` route is removed in favor of this unified home page experience.
-- **Unified Forms:** Service creation and editing are handled by a single `ServiceFormModal` component, reducing code duplication.
-- **Header Navigation:** User avatar dropdown menu includes "Profile" and "Reviews" options, with deep-linking support for profile tabs via URL query parameters.
+- **Home Page:** Features a tabbed interface ("All Listings," "Saved Listings") with independent state for filtering and sorting.
 
 ### Backend Architecture
 
-**Technology Stack:** Node.js with TypeScript (ESM), Express.js, Drizzle ORM, PostgreSQL (Neon serverless), Replit Auth (OpenID Connect), connect-pg-simple for session storage, and OpenAI API (GPT-4o).
+**Technology Stack:** Node.js with TypeScript (ESM), Express.js, Drizzle ORM, PostgreSQL (Neon serverless), Passport.js for authentication, connect-pg-simple for session storage, and OpenAI API (GPT-4o).
 
 **Design Decisions:**
 - **ORM:** Drizzle ORM provides type-safe SQL queries and lightweight database interaction.
-- **Authentication:** Replit Auth with `isAuthenticated` middleware protects routes.
+- **Authentication:** Custom local authentication with email/password, plus OAuth support for Google, Twitter, and Facebook.
 - **Session Management:** PostgreSQL-backed sessions ensure persistence and scalability.
 - **Storage Abstraction:** An `IStorage` interface (`server/storage.ts`) abstracts database operations.
-- **AI Integration:** OpenAI API is used for intelligent service categorization based on service title and description.
-- **Object Storage:** Images stored in Google Cloud Storage with `/objects/uploads/...` paths. `ObjectStorageService.getSignedObjectUrl()` generates temporary signed URLs for external access (e.g., AI features).
+- **AI Integration:** OpenAI API is used for intelligent service categorization, notifications, and content moderation.
+- **Object Storage:** Images stored in Google Cloud Storage with `/objects/uploads/...` paths.
 
 ### Database Schema
 
-**Core Tables:** `users`, `categories`, `subcategories`, `services`, `reviews`, `favorites`, `sessions`.
+**Core Tables:** `users`, `categories`, `subcategories`, `services`, `reviews`, `favorites`, `sessions`, `bookings`, `orders`, `chat_conversations`, `chat_messages`, `notifications`.
 
 **Design Decisions:**
-- **Service Lifecycle:** Services have `draft`, `active`, `expired` statuses and `expiresAt` for automatic cleanup.
+- **Service Lifecycle:** Services have `draft`, `active`, `paused`, `expired` statuses.
 - **IDs:** Uses string-based IDs (UUID compatible) for scalability.
 - **Relationships:** Services link to owners, categories, and optionally subcategories.
 - **Reviews:** Separate `reviews` table supports aggregate calculations.
-- **Service Location Coordinates:** Services now store their own `locationLat`, `locationLng`, and `preferredLocationName` for accurate mapping, independent of the owner's profile location.
-- **Subcategories:** Each category has 5-6 subcategories (58 total) for refined service classification. Services can optionally reference a subcategory via nullable `subcategoryId` field, ensuring full backward compatibility with existing listings.
+- **Referral System:** Multi-level pyramid referral with points and commissions.
+- **Booking System:** Vendor availability, calendar blocks, and booking requests.
+- **Chat System:** Vendor-customer messaging with profanity filtering and moderation.
 
 ### API Structure
 
-**Route Organization:** `/api/auth/*`, `/api/categories`, `/api/categories/:categoryId/subcategories`, `/api/subcategories`, `/api/services/*`, `/api/services/:id/reviews`, `/api/favorites`.
+**Route Organization:** `/api/auth/*`, `/api/categories`, `/api/services/*`, `/api/bookings/*`, `/api/chat/*`, `/api/payments/*`, `/api/notifications/*`.
 
 **Design Decisions:**
 - **RESTful:** Standard HTTP methods for CRUD operations.
-- **Nested Resources:** Reviews nested under services, subcategories nested under categories.
-- **Filtering:** Service listing supports query parameter filtering.
-- **Security:** `isAuthenticated` middleware for protected routes.
+- **Security:** `isAuthenticated` middleware for protected routes, `isAdmin` for admin routes.
 - **Validation:** Zod schemas via Drizzle provide request validation.
-- **Subcategory Endpoints:** 
-  - `GET /api/subcategories` - Fetch all subcategories
-  - `GET /api/categories/:categoryId/subcategories` - Fetch subcategories for a specific category
 
-### Development Environment
+## Features
 
-**Build Configuration:** Vite for frontend dev server (HMR) and production build, tsx for backend dev server hot-reloading, esbuild for backend production build. Drizzle Kit for database migrations.
+### Authentication System
+- Email/password registration with email verification
+- OAuth login (Google, Twitter, Facebook)
+- Password reset via email
+- Rate limiting and account lockout protection
 
-**Design Decisions:**
-- **Monorepo:** Client, server, and shared code in a single repository with TypeScript path mapping.
-- **Optimization:** Separate build tools for client (Vite) and server (esbuild).
+### Referral System
+- Multi-level pyramid referral (L1, L2, L3)
+- Points system with redemption
+- Commission tracking
+- Admin dashboard for referral management
 
-## Recent Updates & Features
+### Booking & Calendar System
+- Vendor availability settings
+- Calendar blocking
+- Booking requests with accept/reject/propose alternative
+- Multi-day booking support
 
-### Service Form Improvements (Latest)
-- **Promotional Packages:** Service-level packages (Standard Free, Featured CHF 9.99, Premium CHF 19.99) and account-wide plans (Professional Badge CHF 5/mo, Pro Account CHF 29/mo) with expandable collapsible section
-- **Location Preselection:** User's main address is auto-selected when posting a new service
-- **Contact Name Prepopulation:** Service contact name field auto-fills with user's name
-- **AI-Enhanced Form:**
-  - Description generator with GPT-4o integration
-  - Hashtag suggestions from image analysis
-  - Category duplicate detection via AI validation
-  - **Image Handling:** AI features accept uploaded images via `/objects/uploads/...` paths, which are automatically converted to temporary signed URLs server-side before sending to OpenAI API
-- **Swiss Address Validation:** Fixed validation for addresses with 4-digit postal codes (e.g., "Farman-Strasse, 8152, Glattbrugg")
-- **Smart Error Messages:** Error toasts now point users to specific form tabs and field issues
-- **Phone Number Guidance:** Specific format guidance for Swiss phone numbers (+41 format)
+### Chat System
+- Vendor-customer messaging
+- Profanity filtering (EN/DE/FR/IT)
+- Contact info blocking
+- Block and report user functionality
+- AI-powered moderation
 
-### Tab Organization (Latest)
-- **Tab 1: Main Info** - Images, title, description, category, hashtags
-- **Tab 2: Location & Contacts** - Service locations with validation, contact information with name prepopulation
-- **Tab 3: Pricing & Plans** - Pricing options, promotional packages with expandable account plans section
+### Payment System (Stripe)
+- Payment intents and checkout sessions
+- Stripe Connect for vendor payouts
+- Platform fee handling
+
+### Notification System
+- In-app notifications
+- Email notifications
+- Web Push notifications (VAPID)
+- AI-powered prioritization
 
 ## External Dependencies
 
 ### Third-Party Services
 
-- **Replit Auth (OpenID Connect):** User authentication and session management. Configured via `ISSUER_URL`, `REPL_ID`, `SESSION_SECRET`.
 - **Neon Serverless PostgreSQL:** Primary database. Configured via `DATABASE_URL`.
-- **OpenAI API:** AI-powered service categorization, description generation, hashtag analysis, and category validation. Configured via `OPENAI_API_KEY`. Uses GPT-4o model.
+- **OpenAI API:** AI features. Configured via `OPENAI_API_KEY`.
+- **Stripe:** Payment processing. Configured via `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- **Google Cloud Storage:** Image storage.
+- **SMTP Server:** Email sending. Configured via `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`.
 
-### Development Tools
+### Environment Variables
 
-- **@replit/vite-plugin-runtime-error-modal:** Displays runtime errors.
-- **@replit/vite-plugin-cartographer:** Code navigation.
-- **@replit/vite-plugin-dev-banner:** Development environment indicator.
+```
+DATABASE_URL=           # Neon PostgreSQL connection string
+SESSION_SECRET=         # Express session secret
+OPENAI_API_KEY=         # OpenAI API key
+
+# OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+TWITTER_CLIENT_ID=
+TWITTER_CLIENT_SECRET=
+FACEBOOK_APP_ID=
+FACEBOOK_APP_SECRET=
+
+# Email
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASSWORD=
+EMAIL_FROM=
+
+# Stripe (optional)
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Push Notifications (optional)
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=
+```
 
 ### UI Component Libraries
 
@@ -118,4 +150,3 @@ Preferred communication style: Simple, everyday language.
 - **TanStack Query:** API request caching, refetching, optimistic updates.
 - **date-fns:** Date manipulation.
 - **class-variance-authority (CVA):** Type-safe variant styling.
-- **nanoid:** Unique ID generation.

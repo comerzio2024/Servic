@@ -205,7 +205,7 @@ export function setupOAuthRoutes(app: Express) {
       const tokens = await tokenResponse.json();
       
       if (!tokens.access_token) {
-        console.error("Twitter token error:", tokens);
+        console.error("Twitter token error: Failed to obtain access token");
         return res.redirect("/login?error=token_error");
       }
       
@@ -318,7 +318,7 @@ export function setupOAuthRoutes(app: Express) {
       const tokens = await tokenResponse.json();
       
       if (!tokens.access_token) {
-        console.error("Facebook token error:", tokens);
+        console.error("Facebook token error: Failed to obtain access token");
         return res.redirect("/login?error=token_error");
       }
       

@@ -15,7 +15,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table (required for Replit Auth)
+// Session storage table (for Express sessions)
 export const sessions = pgTable(
   "sessions",
   {
@@ -57,10 +57,6 @@ export const plans = pgTable("plans", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
-export const plansRelations = relations(plans, ({ many }) => ({
-  users: many(users),
-}));
 
 // Users table (extended for marketplace with local auth)
 export const users = pgTable("users", {
@@ -125,6 +121,11 @@ export const users = pgTable("users", {
   index("idx_users_referral_code").on(table.referralCode),
   index("idx_users_referred_by").on(table.referredBy),
 ]);
+
+// Plans relations (declared after users to avoid circular reference)
+export const plansRelations = relations(plans, ({ many }) => ({
+  users: many(users),
+}));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   plan: one(plans, {

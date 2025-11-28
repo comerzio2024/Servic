@@ -1198,7 +1198,7 @@ export async function seedDatabase() {
         description: "Expert cloud infrastructure setup and migration. AWS, Azure, Google Cloud. CI/CD pipelines, containerization, monitoring. Save costs and improve reliability.",
         priceType: "text" as const,
         priceText: "Project-based pricing - contact us",
-        priceUnit: "custom" as const,
+        priceUnit: "job" as const,
         contactPhone: "+41 78 456 78 90",
         contactEmail: "cloud.devops@example.ch",
         locations: ["Basel", "Zürich", "Remote"],
