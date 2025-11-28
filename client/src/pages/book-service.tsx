@@ -653,29 +653,48 @@ export default function BookServicePage() {
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {service.images && service.images.length > 0 ? (
-                      <img 
-                        src={service.images[0]} 
-                        alt={service.title}
-                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                      />
+                      <a 
+                        href={`/service/${serviceId}`}
+                        className="block flex-shrink-0 rounded-lg overflow-hidden hover:opacity-90 transition-opacity cursor-pointer"
+                      >
+                        <img 
+                          src={service.images[0]} 
+                          alt={service.title}
+                          className="w-20 h-20 object-cover"
+                        />
+                      </a>
                     ) : (
-                      <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <a 
+                        href={`/service/${serviceId}`}
+                        className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
                         <Sparkles className="w-8 h-8 text-muted-foreground" />
-                      </div>
+                      </a>
                     )}
                     <div className="min-w-0">
-                      <h3 className="font-semibold truncate">{service.title}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Avatar className="w-5 h-5">
+                      {/* Clickable Service Title */}
+                      <a 
+                        href={`/service/${serviceId}`}
+                        className="font-semibold truncate block hover:text-primary hover:underline transition-colors cursor-pointer"
+                        title={service.title}
+                      >
+                        {service.title}
+                      </a>
+                      {/* Clickable Vendor Name */}
+                      <a 
+                        href={`/vendors/${service.ownerId}`}
+                        className="flex items-center gap-2 mt-1 group cursor-pointer"
+                      >
+                        <Avatar className="w-5 h-5 ring-1 ring-transparent group-hover:ring-primary/50 transition-all">
                           <AvatarImage src={service.owner.profileImageUrl || undefined} />
                           <AvatarFallback className="text-xs">
                             {service.owner.firstName?.[0] || 'V'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-muted-foreground group-hover:text-primary group-hover:underline transition-colors">
                           {service.owner.firstName} {service.owner.lastName}
                         </span>
-                      </div>
+                      </a>
                       {service.rating && (
                         <div className="flex items-center gap-1 mt-2">
                           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />

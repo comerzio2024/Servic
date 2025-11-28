@@ -2,11 +2,16 @@
  * ChatWindow Component
  * 
  * Displays messages in a conversation with real-time updates
- * Features: Emoji support, improved styling, read receipts
+ * Features: 
+ * - Emoji support
+ * - Improved styling with professional SaaS look
+ * - Read receipts
+ * - Clickable seller/product context
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,7 +33,9 @@ import {
   CheckCheck,
   Phone,
   Video,
-  Info
+  Info,
+  ExternalLink,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -55,12 +62,29 @@ interface Message {
   createdAt: string;
 }
 
+interface ServiceContext {
+  id: string;
+  title: string;
+  images?: string[];
+  price?: string;
+  currency?: string;
+}
+
+interface VendorContext {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profileImageUrl?: string;
+}
+
 interface ChatWindowProps {
   conversationId: string;
   currentUserId: string;
   currentUserRole: 'customer' | 'vendor';
   otherPartyName?: string;
   otherPartyImage?: string;
+  otherPartyId?: string;
+  service?: ServiceContext;
   onClose?: () => void;
   className?: string;
 }
@@ -71,6 +95,8 @@ export function ChatWindow({
   currentUserRole,
   otherPartyName,
   otherPartyImage,
+  otherPartyId,
+  service,
   onClose,
   className,
 }: ChatWindowProps) {
@@ -200,13 +226,19 @@ export function ChatWindow({
     );
   }
 
+  // Determine the profile link based on role
+  const profileLink = currentUserRole === 'customer' 
+    ? `/vendors/${otherPartyId}` 
+    : `/profile/${otherPartyId}`;
+
   return (
-    <Card className={cn("flex flex-col h-full overflow-hidden shadow-lg", className)}>
-      {/* Header */}
-      <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 px-6 py-4 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-12 w-12 ring-2 ring-white dark:ring-slate-700 shadow-md">
+    <Card className={cn("flex flex-col h-full overflow-hidden", className)}>
+      {/* Header - Professional SaaS style */}
+      <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 px-4 md:px-6 py-4 flex flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+          {/* Clickable Avatar */}
+          <Link href={profileLink} className="relative flex-shrink-0 group">
+            <Avatar className="h-11 w-11 md:h-12 md:w-12 ring-2 ring-white dark:ring-slate-700 shadow-md group-hover:ring-primary/50 transition-all">
               <AvatarImage src={otherPartyImage} />
               <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white font-semibold">
                 {otherPartyName?.slice(0, 2).toUpperCase() || '??'}
@@ -214,16 +246,41 @@ export function ChatWindow({
             </Avatar>
             {/* Online indicator */}
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
-          </div>
-          <div>
-            <CardTitle className="text-lg font-semibold">{otherPartyName || 'Chat'}</CardTitle>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
+          </Link>
+          
+          <div className="flex-1 min-w-0">
+            {/* Clickable Name */}
+            <Link 
+              href={profileLink}
+              className="text-base md:text-lg font-semibold hover:text-primary hover:underline transition-colors line-clamp-1 flex items-center gap-1.5"
+            >
+              {otherPartyName || 'Chat'}
+              <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50" />
+            </Link>
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Online • {currentUserRole === 'customer' ? 'Vendor' : 'Customer'}
+              <span>Online</span>
+              <span className="text-slate-300 dark:text-slate-600">•</span>
+              <span>{currentUserRole === 'customer' ? 'Vendor' : 'Customer'}</span>
             </p>
+            
+            {/* Product Context - Compact pill */}
+            {service && (
+              <Link 
+                href={`/service/${service.id}`}
+                className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-full text-xs text-primary transition-colors"
+              >
+                <Package className="w-3 h-3" />
+                <span className="truncate max-w-[150px]">{service.title}</span>
+                {service.price && (
+                  <span className="font-medium">{service.currency || 'CHF'} {service.price}</span>
+                )}
+              </Link>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        
+        <div className="flex items-center gap-1 flex-shrink-0">
           {onClose && (
             <Button size="icon" variant="ghost" onClick={onClose} className="hover:bg-slate-100 dark:hover:bg-slate-700">
               <X className="w-5 h-5" />

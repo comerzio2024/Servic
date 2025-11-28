@@ -2,17 +2,23 @@
  * Chat Page
  * 
  * Full chat interface with conversation list and message window
+ * Features:
+ * - Centered chat panel with professional styling
+ * - Product/seller context in header
+ * - Responsive layout
  */
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Layout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { MessageSquare, ArrowLeft } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface Conversation {
@@ -29,6 +35,26 @@ interface Conversation {
   vendorUnreadCount: number;
   flaggedForReview: boolean;
   createdAt: string;
+  // Extended fields for context
+  service?: {
+    id: string;
+    title: string;
+    images?: string[];
+    price?: string;
+    currency?: string;
+  };
+  vendor?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl?: string;
+  };
+  customer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl?: string;
+  };
 }
 
 export default function ChatPage() {
@@ -100,54 +126,32 @@ export default function ChatPage() {
   }
 
   const currentUserRole = selectedConversation?.customerId === user.id ? 'customer' : 'vendor';
+  
+  // Get the other party info
+  const otherParty = currentUserRole === 'customer' 
+    ? selectedConversation?.vendor 
+    : selectedConversation?.customer;
+  
+  const otherPartyName = otherParty 
+    ? `${otherParty.firstName} ${otherParty.lastName}` 
+    : undefined;
 
   return (
     <Layout>
-      <div className="container max-w-6xl py-4 md:py-8">
-        <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl font-bold">Messages</h1>
-          <p className="text-muted-foreground">
-            Chat with vendors and customers
-          </p>
-        </div>
-
-        {/* Desktop Layout */}
-        <div className="hidden md:grid md:grid-cols-3 gap-4 h-[calc(100vh-220px)]">
-          {/* Conversation List */}
-          <Card className="col-span-1">
-            <ConversationList
-              currentUserId={user.id}
-              selectedConversationId={selectedConversation?.id}
-              onSelectConversation={handleSelectConversation}
-              className="h-full"
-            />
-          </Card>
-
-          {/* Chat Window */}
-          <div className="col-span-2">
-            {selectedConversation ? (
-              <ChatWindow
-                conversationId={selectedConversation.id}
-                currentUserId={user.id}
-                currentUserRole={currentUserRole as 'customer' | 'vendor'}
-                className="h-full"
-              />
-            ) : (
-              <Card className="h-full flex items-center justify-center">
-                <CardContent className="text-center text-muted-foreground">
-                  <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Select a conversation</p>
-                  <p className="text-sm">Choose a chat from the list to start messaging</p>
-                </CardContent>
-              </Card>
-            )}
+      <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50/50 to-white dark:from-slate-950/50 dark:to-slate-900">
+        <div className="container max-w-7xl py-4 md:py-6 px-4">
+          {/* Header */}
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold">Messages</h1>
+            <p className="text-muted-foreground">
+              Chat with vendors and customers
+            </p>
           </div>
-        </div>
 
-        {/* Mobile Layout */}
-        <div className="md:hidden h-[calc(100vh-180px)]">
-          {!isMobileViewingChat ? (
-            <Card className="h-full">
+          {/* Desktop Layout - Centered chat panel */}
+          <div className="hidden md:grid md:grid-cols-[300px_1fr] lg:grid-cols-[320px_1fr] gap-6 h-[calc(100vh-200px)]">
+            {/* Conversation List - Fixed width sidebar */}
+            <Card className="border-0 shadow-lg overflow-hidden">
               <ConversationList
                 currentUserId={user.id}
                 selectedConversationId={selectedConversation?.id}
@@ -155,24 +159,137 @@ export default function ChatPage() {
                 className="h-full"
               />
             </Card>
-          ) : selectedConversation ? (
-            <div className="h-full flex flex-col">
-              <Button
-                variant="ghost"
-                className="mb-2 self-start"
-                onClick={handleBackToList}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to conversations
-              </Button>
-              <ChatWindow
-                conversationId={selectedConversation.id}
-                currentUserId={user.id}
-                currentUserRole={currentUserRole as 'customer' | 'vendor'}
-                className="flex-1"
-              />
+
+            {/* Chat Window - Centered with max-width */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-[900px]">
+                {selectedConversation ? (
+                  <div className="h-full flex flex-col">
+                    {/* Product Context Bar */}
+                    {selectedConversation.service && (
+                      <Card className="mb-3 border-0 shadow-md bg-gradient-to-r from-primary/5 to-transparent">
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-3">
+                            {selectedConversation.service.images?.[0] ? (
+                              <Link href={`/service/${selectedConversation.service.id}`}>
+                                <img 
+                                  src={selectedConversation.service.images[0]} 
+                                  alt={selectedConversation.service.title}
+                                  className="w-12 h-12 rounded-lg object-cover hover:opacity-80 transition-opacity cursor-pointer"
+                                />
+                              </Link>
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                <Package className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <Link 
+                                href={`/service/${selectedConversation.service.id}`}
+                                className="font-medium text-sm hover:text-primary hover:underline transition-colors line-clamp-1"
+                              >
+                                {selectedConversation.service.title}
+                              </Link>
+                              {selectedConversation.service.price && (
+                                <Badge variant="secondary" className="mt-1 text-xs">
+                                  {selectedConversation.service.currency || 'CHF'} {selectedConversation.service.price}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {/* Chat Window with enhanced styling */}
+                    <ChatWindow
+                      conversationId={selectedConversation.id}
+                      currentUserId={user.id}
+                      currentUserRole={currentUserRole as 'customer' | 'vendor'}
+                      otherPartyName={otherPartyName}
+                      otherPartyImage={otherParty?.profileImageUrl}
+                      className="flex-1 border-0 shadow-xl rounded-2xl overflow-hidden"
+                    />
+                  </div>
+                ) : (
+                  <Card className="h-full flex items-center justify-center border-0 shadow-lg rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
+                    <CardContent className="text-center text-muted-foreground py-16">
+                      <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                        <MessageSquare className="w-12 h-12 text-primary/60" />
+                      </div>
+                      <p className="text-xl font-semibold mb-2">Select a conversation</p>
+                      <p className="text-sm max-w-xs mx-auto">Choose a chat from the list to start messaging with vendors or customers</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
-          ) : null}
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="md:hidden h-[calc(100vh-160px)]">
+            {!isMobileViewingChat ? (
+              <Card className="h-full border-0 shadow-lg overflow-hidden">
+                <ConversationList
+                  currentUserId={user.id}
+                  selectedConversationId={selectedConversation?.id}
+                  onSelectConversation={handleSelectConversation}
+                  className="h-full"
+                />
+              </Card>
+            ) : selectedConversation ? (
+              <div className="h-full flex flex-col">
+                <Button
+                  variant="ghost"
+                  className="mb-2 self-start -ml-2"
+                  onClick={handleBackToList}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to conversations
+                </Button>
+                
+                {/* Mobile Product Context */}
+                {selectedConversation.service && (
+                  <Card className="mb-3 border-0 shadow-md">
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-3">
+                        {selectedConversation.service.images?.[0] ? (
+                          <Link href={`/service/${selectedConversation.service.id}`}>
+                            <img 
+                              src={selectedConversation.service.images[0]} 
+                              alt={selectedConversation.service.title}
+                              className="w-10 h-10 rounded-lg object-cover"
+                            />
+                          </Link>
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <Package className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <Link 
+                            href={`/service/${selectedConversation.service.id}`}
+                            className="font-medium text-sm hover:text-primary line-clamp-1"
+                          >
+                            {selectedConversation.service.title}
+                          </Link>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                <ChatWindow
+                  conversationId={selectedConversation.id}
+                  currentUserId={user.id}
+                  currentUserRole={currentUserRole as 'customer' | 'vendor'}
+                  otherPartyName={otherPartyName}
+                  otherPartyImage={otherParty?.profileImageUrl}
+                  className="flex-1 border-0 shadow-lg rounded-xl"
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </Layout>
