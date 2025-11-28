@@ -1,13 +1,16 @@
 /**
  * Vendor Bookings Page
  * 
- * Dashboard for vendors to manage their booking requests
+ * Enhanced dashboard for vendors to manage:
+ * - Booking requests
+ * - Availability calendar
+ * - Schedule management
  */
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingCard } from '@/components/booking/BookingCard';
+import { VendorAvailabilityCalendar } from '@/components/booking/VendorAvailabilityCalendar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -25,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -32,7 +37,12 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  LayoutDashboard,
+  ListTodo,
+  Settings,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
@@ -61,6 +71,7 @@ interface Booking {
 export default function VendorBookingsPage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [mainTab, setMainTab] = useState<'bookings' | 'calendar'>('bookings');
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [actionType, setActionType] = useState<'reject' | 'alternative' | null>(null);
@@ -231,70 +242,113 @@ export default function VendorBookingsPage() {
 
   return (
     <Layout>
-      <div className="container max-w-5xl py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Booking Management</h1>
-          <p className="text-muted-foreground">
-            Manage your booking requests and schedule
-          </p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+        <div className="container max-w-6xl py-6 md:py-8 px-4">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Booking Management</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your booking requests, schedule, and availability
+              </p>
+            </div>
+            
+            {/* Main Tab Switcher */}
+            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+              <Button
+                variant={mainTab === 'bookings' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setMainTab('bookings')}
+                className={cn(
+                  "gap-2 transition-all",
+                  mainTab === 'bookings' && "shadow-sm"
+                )}
+              >
+                <ListTodo className="w-4 h-4" />
+                <span className="hidden sm:inline">Bookings</span>
+                {pendingData?.count > 0 && (
+                  <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                    {pendingData.count}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                variant={mainTab === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setMainTab('calendar')}
+                className={cn(
+                  "gap-2 transition-all",
+                  mainTab === 'calendar' && "shadow-sm"
+                )}
+              >
+                <CalendarIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Calendar</span>
+              </Button>
+            </div>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Clock className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingData?.count || 0}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {bookings.filter(b => b.status === 'confirmed' || b.status === 'accepted').length}
-                </p>
-                <p className="text-xs text-muted-foreground">Confirmed</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <RefreshCw className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {bookings.filter(b => b.status === 'in_progress').length}
-                </p>
-                <p className="text-xs text-muted-foreground">In Progress</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {bookings.filter(b => b.status === 'completed').length}
-                </p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Stats Cards */}
+          <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4 mb-6">
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{pendingData?.count || 0}</p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {bookings.filter(b => b.status === 'confirmed' || b.status === 'accepted').length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Confirmed</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                  <RefreshCw className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {bookings.filter(b => b.status === 'in_progress').length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">In Progress</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                  <CheckCircle2 className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {bookings.filter(b => b.status === 'completed').length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          {/* Calendar View */}
+          {mainTab === 'calendar' && (
+            <VendorAvailabilityCalendar />
+          )}
+
+          {/* Bookings View */}
+          {mainTab === 'bookings' && (
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="pending" className="relative">
               Pending
@@ -359,6 +413,7 @@ export default function VendorBookingsPage() {
             )}
           </TabsContent>
         </Tabs>
+          )}
 
         {/* Reject Dialog */}
         <Dialog open={actionType === 'reject'} onOpenChange={() => setActionType(null)}>
@@ -459,6 +514,7 @@ export default function VendorBookingsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </Layout>
   );

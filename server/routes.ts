@@ -3239,6 +3239,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Calculate booking price
+  app.post('/api/bookings/calculate-price', async (req, res) => {
+    try {
+      const { serviceId, pricingOptionId, startTime, endTime } = req.body;
+      
+      if (!serviceId || !startTime || !endTime) {
+        return res.status(400).json({ message: "serviceId, startTime, and endTime are required" });
+      }
+
+      const { calculateBookingPrice } = await import('./pricingCalculationService');
+      
+      const breakdown = await calculateBookingPrice({
+        serviceId,
+        pricingOptionId,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+      });
+      
+      res.json(breakdown);
+    } catch (error: any) {
+      console.error("Error calculating price:", error);
+      res.status(400).json({ message: error.message || "Failed to calculate price" });
+    }
+  });
+
   // Create booking request
   app.post('/api/bookings', isAuthenticated, async (req: any, res) => {
     try {
