@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { users, reviews, services } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { users, reviews, services, notifications, pushSubscriptions } from "@shared/schema";
 import { setupAuth, isAuthenticated, requireEmailVerified } from "./auth";
 import { isAdmin, adminLogin, adminLogout, getAdminSession } from "./adminAuth";
 import { setupOAuthRoutes } from "./oauthProviders";
@@ -49,6 +49,26 @@ import {
   calculateDiscountValue,
 } from "./pointsService";
 import {
+  createNotification,
+  getNotifications,
+  getUnreadCount as getNotificationUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  dismissNotification,
+  clearAllNotifications,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "./notificationService";
+import {
+  initializePushService,
+  isPushEnabled,
+  getVapidPublicKey,
+  registerPushSubscription,
+  unregisterPushSubscription,
+  getUserSubscriptions,
+} from "./pushService";
+import { updateNotificationPreferencesSchema, NOTIFICATION_TYPES, type NotificationType } from "@shared/schema";
+import {
   isStripeConfigured,
   getStripePublishableKey,
   getOrCreateStripeCustomer,
@@ -92,7 +112,7 @@ import {
   sendMessage,
   getMessages,
   markMessagesAsRead,
-  getUnreadCount,
+  getUnreadCount as getChatUnreadCount,
   sendSystemMessage,
   blockConversation,
   getFlaggedConversations,
@@ -3423,7 +3443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get unread message count
   app.get('/api/chat/unread-count', isAuthenticated, async (req: any, res) => {
     try {
-      const count = await getUnreadCount(req.user!.id);
+      const count = await getChatUnreadCount(req.user!.id);
       res.json({ count });
     } catch (error) {
       console.error("Error fetching unread count:", error);
@@ -3611,6 +3631,353 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error clearing flag:", error);
       res.status(500).json({ message: "Failed to clear flag" });
+    }
+  });
+
+  // ===========================================
+  // NOTIFICATION ROUTES
+  // ===========================================
+
+  // Initialize push service on server start
+  initializePushService();
+
+  /**
+   * Get notifications for authenticated user
+   * Supports pagination and filtering by type/read status
+   */
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const { 
+        limit = '20', 
+        offset = '0', 
+        unreadOnly = 'false',
+        types 
+      } = req.query;
+
+      const result = await getNotifications(req.user!.id, {
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        unreadOnly: unreadOnly === 'true',
+        types: types ? (types as string).split(',') as NotificationType[] : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  /**
+   * Get unread notification count for badge display
+   */
+  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const count = await getNotificationUnreadCount(req.user!.id);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  /**
+   * Mark a specific notification as read
+   */
+  app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const success = await markAsRead(req.params.id, req.user!.id);
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark as read" });
+    }
+  });
+
+  /**
+   * Mark all notifications as read
+   */
+  app.post('/api/notifications/mark-all-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const count = await markAllAsRead(req.user!.id);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      res.status(500).json({ message: "Failed to mark all as read" });
+    }
+  });
+
+  /**
+   * Dismiss (soft delete) a notification
+   */
+  app.post('/api/notifications/:id/dismiss', isAuthenticated, async (req: any, res) => {
+    try {
+      const success = await dismissNotification(req.params.id, req.user!.id);
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing notification:", error);
+      res.status(500).json({ message: "Failed to dismiss notification" });
+    }
+  });
+
+  /**
+   * Clear all notifications for user
+   */
+  app.post('/api/notifications/clear-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const count = await clearAllNotifications(req.user!.id);
+      res.json({ success: true, count });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      res.status(500).json({ message: "Failed to clear notifications" });
+    }
+  });
+
+  // ===========================================
+  // NOTIFICATION PREFERENCES
+  // ===========================================
+
+  /**
+   * Get user's notification preferences
+   */
+  app.get('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const preferences = await getNotificationPreferences(req.user!.id);
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+      res.status(500).json({ message: "Failed to fetch preferences" });
+    }
+  });
+
+  /**
+   * Update notification preferences
+   */
+  app.put('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      // Validate input
+      const validationResult = updateNotificationPreferencesSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid preferences data",
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const preferences = await updateNotificationPreferences(
+        req.user!.id, 
+        validationResult.data
+      );
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating preferences:", error);
+      res.status(500).json({ message: "Failed to update preferences" });
+    }
+  });
+
+  /**
+   * Get available notification types (for UI)
+   */
+  app.get('/api/notifications/types', (req, res) => {
+    res.json({
+      types: NOTIFICATION_TYPES,
+      descriptions: {
+        message: "Chat messages from vendors or customers",
+        booking: "Booking confirmations, updates, and reminders",
+        referral: "Referral rewards and new sign-ups",
+        service: "Service approval and status updates",
+        payment: "Payment receipts and payout notifications",
+        system: "Platform updates and announcements",
+        review: "New reviews on your services",
+        promotion: "Special offers and promotional content",
+      },
+    });
+  });
+
+  // ===========================================
+  // PUSH NOTIFICATION SUBSCRIPTION
+  // ===========================================
+
+  /**
+   * Get VAPID public key for push subscription
+   */
+  app.get('/api/push/vapid-key', (req, res) => {
+    if (!isPushEnabled()) {
+      return res.status(503).json({ 
+        message: "Push notifications not configured",
+        enabled: false 
+      });
+    }
+    res.json({ 
+      publicKey: getVapidPublicKey(),
+      enabled: true 
+    });
+  });
+
+  /**
+   * Register a push subscription
+   */
+  app.post('/api/push/subscribe', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!isPushEnabled()) {
+        return res.status(503).json({ message: "Push notifications not configured" });
+      }
+
+      const { subscription, deviceInfo } = req.body;
+
+      if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        return res.status(400).json({ message: "Invalid subscription data" });
+      }
+
+      const result = await registerPushSubscription(
+        req.user!.id,
+        subscription,
+        deviceInfo
+      );
+
+      // Enable push in user's preferences
+      await updateNotificationPreferences(req.user!.id, { pushEnabled: true });
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error registering push subscription:", error);
+      res.status(500).json({ message: "Failed to register subscription" });
+    }
+  });
+
+  /**
+   * Unregister a push subscription
+   */
+  app.post('/api/push/unsubscribe', isAuthenticated, async (req: any, res) => {
+    try {
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        return res.status(400).json({ message: "Endpoint is required" });
+      }
+
+      const success = await unregisterPushSubscription(req.user!.id, endpoint);
+      
+      // Check if user has any remaining subscriptions
+      const remaining = await getUserSubscriptions(req.user!.id);
+      if (remaining.length === 0) {
+        // Disable push in preferences if no subscriptions left
+        await updateNotificationPreferences(req.user!.id, { pushEnabled: false });
+      }
+
+      res.json({ success });
+    } catch (error) {
+      console.error("Error unregistering push subscription:", error);
+      res.status(500).json({ message: "Failed to unregister subscription" });
+    }
+  });
+
+  /**
+   * Get user's push subscriptions
+   */
+  app.get('/api/push/subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const subscriptions = await getUserSubscriptions(req.user!.id);
+      res.json({ subscriptions });
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+
+  // ===========================================
+  // ADMIN NOTIFICATION ROUTES
+  // ===========================================
+
+  /**
+   * Admin: Send system notification to all users
+   */
+  app.post('/api/admin/notifications/broadcast', isAdmin, async (req: any, res) => {
+    try {
+      const { title, message, actionUrl, userIds } = req.body;
+
+      if (!title || !message) {
+        return res.status(400).json({ message: "Title and message are required" });
+      }
+
+      // Get target users
+      let targetUserIds: string[] = userIds;
+      if (!userIds || userIds.length === 0) {
+        // Get all user IDs
+        const allUsers = await db.select({ id: users.id }).from(users);
+        targetUserIds = allUsers.map(u => u.id);
+      }
+
+      // Create notifications for each user
+      const results = await Promise.allSettled(
+        targetUserIds.map(userId =>
+          createNotification({
+            userId,
+            type: "system",
+            title,
+            message,
+            actionUrl,
+            skipAIPrioritization: true,
+          })
+        )
+      );
+
+      const successful = results.filter(r => r.status === "fulfilled").length;
+      const failed = results.filter(r => r.status === "rejected").length;
+
+      res.json({ 
+        success: true, 
+        sent: successful, 
+        failed,
+        total: targetUserIds.length 
+      });
+    } catch (error) {
+      console.error("Error broadcasting notification:", error);
+      res.status(500).json({ message: "Failed to broadcast notification" });
+    }
+  });
+
+  /**
+   * Admin: Get notification statistics
+   */
+  app.get('/api/admin/notifications/stats', isAdmin, async (req: any, res) => {
+    try {
+      // Get notification stats from DB
+      const totalNotifications = await db.select({ count: sql<number>`count(*)::int` })
+        .from(notifications);
+      
+      const unreadNotifications = await db.select({ count: sql<number>`count(*)::int` })
+        .from(notifications)
+        .where(eq(notifications.isRead, false));
+      
+      const pushSubscriptionsCount = await db.select({ count: sql<number>`count(*)::int` })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.isActive, true));
+
+      // Get notifications by type
+      const byType = await db.select({
+        type: notifications.type,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(notifications)
+        .groupBy(notifications.type);
+
+      res.json({
+        total: totalNotifications[0]?.count || 0,
+        unread: unreadNotifications[0]?.count || 0,
+        pushSubscriptions: pushSubscriptionsCount[0]?.count || 0,
+        byType: byType.reduce((acc, item) => ({ ...acc, [item.type]: item.count }), {}),
+        pushEnabled: isPushEnabled(),
+      });
+    } catch (error) {
+      console.error("Error fetching notification stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
 

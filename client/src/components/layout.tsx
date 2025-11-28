@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Menu, PlusCircle, LogOut, Heart, Settings, User, Star, Gift } from "lucide-react";
+import { Menu, PlusCircle, LogOut, Heart, Settings, User, Star, Gift, MessageCircle, Bell } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { SearchAutocomplete } from "@/components/search-autocomplete";
 import { CreateServiceModal } from "@/components/create-service-modal";
 import { CategorySuggestionModal } from "@/components/category-suggestion-modal";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useState } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -76,6 +77,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <PlusCircle className="w-4 h-4" />
                     Post Service
                   </Button>
+                  
+                  {/* Chat Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative hover:bg-slate-100 transition-colors"
+                    onClick={() => setLocation("/chat")}
+                    aria-label="Messages"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                  </Button>
+
+                  {/* Notification Bell */}
+                  <NotificationBell />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 transition-colors cursor-pointer">
@@ -107,6 +123,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         <Gift className="w-4 h-4 mr-2" />
                         Refer & Earn
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setLocation("/chat")} data-testid="menu-item-messages">
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Messages
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation("/notifications")} data-testid="menu-item-notifications">
+                        <Bell className="w-4 h-4 mr-2" />
+                        Notifications
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigateToProfile('notifications')} data-testid="menu-item-notification-settings">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Notification Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         onClick={async () => {
                           await fetch("/api/auth/logout", { method: "POST" });
@@ -153,6 +183,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/favorites"><span className="text-lg font-medium cursor-pointer">Saved</span></Link>
                   <Link href="/how-it-works"><span className="text-lg font-medium cursor-pointer">How it Works</span></Link>
                   <div className="h-px bg-border my-2" />
+                  {isAuthenticated && user && (
+                    <>
+                      <Link href="/chat">
+                        <span className="text-lg font-medium cursor-pointer flex items-center gap-2">
+                          <MessageCircle className="w-5 h-5" />
+                          Messages
+                        </span>
+                      </Link>
+                      <Link href="/notifications">
+                        <span className="text-lg font-medium cursor-pointer flex items-center gap-2">
+                          <Bell className="w-5 h-5" />
+                          Notifications
+                        </span>
+                      </Link>
+                      <div className="h-px bg-border my-2" />
+                    </>
+                  )}
                   <Button 
                     className="w-full" 
                     onClick={() => setShowCreateService(true)}

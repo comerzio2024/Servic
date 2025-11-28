@@ -31,6 +31,7 @@ import ReferralsPage from "@/pages/referrals";
 import ChatPage from "@/pages/chat";
 import VendorBookingsPage from "@/pages/vendor-bookings";
 import BookServicePage from "@/pages/book-service";
+import NotificationsPage from "@/pages/notifications";
 
 // Create a context for the page context actions
 export const PageContextActionsContext = createContext<PageContextActions | null>(null);
@@ -79,6 +80,8 @@ function Router() {
       {/* Chat routes */}
       <Route path="/chat" component={ChatPage} />
       <Route path="/messages" component={ChatPage} />
+      {/* Notification routes */}
+      <Route path="/notifications" component={NotificationsPage} />
       {/* Vendor routes */}
       <Route path="/vendor/bookings" component={VendorBookingsPage} />
       <Route path="/my-bookings" component={VendorBookingsPage} />

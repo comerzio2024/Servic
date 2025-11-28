@@ -5,7 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Settings, CreditCard, BarChart3, RefreshCw, Clock, Trash2, Plus, Edit2, MapPin, CheckCircle2, User as UserIcon, Camera, Loader2, Edit, Trash, Pencil, Check, Gift, Users, Star, TrendingUp, Copy, Share2, ChevronDown, ChevronRight, DollarSign, MessageCircle } from "lucide-react";
+import { PlusCircle, Settings, CreditCard, BarChart3, RefreshCw, Clock, Trash2, Plus, Edit2, MapPin, CheckCircle2, User as UserIcon, Camera, Loader2, Edit, Trash, Pencil, Check, Gift, Users, Star, TrendingUp, Copy, Share2, ChevronDown, ChevronRight, DollarSign, MessageCircle, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,7 @@ import Cropper from "react-easy-crop";
 import { Slider } from "@/components/ui/slider";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { geocodeLocation } from "@/lib/geocoding";
+import { NotificationPreferences } from "@/components/notifications/NotificationPreferences";
 
 export default function Profile() {
   // Scroll to top on mount and tab change
@@ -43,7 +44,7 @@ export default function Profile() {
     const search = window.location.search;
     const searchParams = new URLSearchParams(search);
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['profile', 'services', 'reviews', 'referrals'].includes(tabParam)) {
+    if (tabParam && ['profile', 'services', 'reviews', 'referrals', 'notifications'].includes(tabParam)) {
       return tabParam;
     }
     return 'profile';
@@ -598,6 +599,10 @@ export default function Profile() {
               <TabsTrigger value="referrals" data-testid="tab-referrals" className="gap-1">
                 <Gift className="w-3 h-3" />
                 Referrals
+              </TabsTrigger>
+              <TabsTrigger value="notifications" data-testid="tab-notifications" className="gap-1">
+                <Bell className="w-3 h-3" />
+                Notifications
               </TabsTrigger>
             </TabsList>
 
@@ -1395,6 +1400,20 @@ export default function Profile() {
             {/* Referrals Tab */}
             <TabsContent value="referrals" data-testid="panel-referrals" className="space-y-6">
               <ReferralDashboard />
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" data-testid="panel-notifications" className="space-y-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                  <Bell className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Notification Settings</h2>
+                  <p className="text-muted-foreground">Manage how and when you receive notifications</p>
+                </div>
+              </div>
+              <NotificationPreferences />
             </TabsContent>
 
           </Tabs>

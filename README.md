@@ -57,6 +57,16 @@ A full-stack TypeScript application for a service marketplace with a React front
    
    FACEBOOK_APP_ID=your-facebook-app-id
    FACEBOOK_APP_SECRET=your-facebook-app-secret
+   
+   # Optional - Push Notifications (Web Push)
+   VAPID_PUBLIC_KEY=your-vapid-public-key
+   VAPID_PRIVATE_KEY=your-vapid-private-key
+   VAPID_SUBJECT=mailto:your-email@example.com
+   
+   # Optional - Stripe Payments
+   STRIPE_SECRET_KEY=sk_test_your-stripe-secret-key
+   STRIPE_PUBLISHABLE_KEY=pk_test_your-stripe-publishable-key
+   STRIPE_WEBHOOK_SECRET=whsec_your-webhook-secret
    ```
 
 3. **Set up the database:**
@@ -229,6 +239,72 @@ If port 5000 is already in use, change the `PORT` environment variable in your `
 - `POST /api/admin/login` - Admin login
 - `POST /api/admin/logout` - Admin logout
 - `GET /api/admin/session` - Check admin session
+
+### Notifications
+- `GET /api/notifications` - Get user notifications (paginated)
+- `GET /api/notifications/unread-count` - Get unread notification count
+- `POST /api/notifications/:id/read` - Mark notification as read
+- `POST /api/notifications/mark-all-read` - Mark all as read
+- `POST /api/notifications/:id/dismiss` - Dismiss a notification
+- `POST /api/notifications/clear-all` - Clear all notifications
+- `GET /api/notifications/preferences` - Get notification preferences
+- `PUT /api/notifications/preferences` - Update notification preferences
+- `GET /api/notifications/types` - Get available notification types
+
+### Push Notifications
+- `GET /api/push/vapid-key` - Get VAPID public key for subscription
+- `POST /api/push/subscribe` - Register a push subscription
+- `POST /api/push/unsubscribe` - Remove a push subscription
+- `GET /api/push/subscriptions` - Get user's push subscriptions
+
+## Push Notification Setup
+
+To enable Web Push notifications:
+
+1. **Generate VAPID keys:**
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+
+2. **Add to your `.env` file:**
+   ```env
+   VAPID_PUBLIC_KEY=<your-public-key>
+   VAPID_PRIVATE_KEY=<your-private-key>
+   VAPID_SUBJECT=mailto:your-email@example.com
+   ```
+
+3. **Test push notifications:**
+   - Log in to the platform
+   - Go to Profile → Notification Settings
+   - Enable "Push" notifications
+   - Allow browser permission when prompted
+
+## Notification Types
+
+The platform supports the following notification types:
+- **Messages** - Chat messages from vendors or customers
+- **Bookings** - Booking confirmations, updates, and reminders
+- **Referrals** - Referral rewards and new sign-ups
+- **Services** - Service approval and status updates
+- **Payments** - Payment receipts and payout notifications
+- **System** - Platform updates and announcements
+- **Reviews** - New reviews on your services
+- **Promotions** - Special offers and promotional content
+
+Each type can be independently configured for:
+- In-app notifications (shown in the notification bell)
+- Email notifications
+- Push notifications (browser/device)
+
+## AI-Powered Notification Prioritization
+
+The notification system uses OpenAI to intelligently prioritize notifications based on:
+- Notification type and content urgency
+- Financial impact (payments have higher priority)
+- Time sensitivity (bookings, deadlines)
+- User engagement patterns
+
+If `OPENAI_API_KEY` is not configured, the system falls back to rule-based prioritization.
 
 ## License
 

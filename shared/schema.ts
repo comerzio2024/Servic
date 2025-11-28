@@ -3,6 +3,7 @@ import {
   index,
   jsonb,
   pgTable,
+  pgEnum,
   timestamp,
   varchar,
   text,
@@ -1451,6 +1452,167 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
 // ===========================================
 
 // ===========================================
+// NOTIFICATION SYSTEM
+// ===========================================
+
+/**
+ * Notification Types Enum
+ * Defines all possible notification categories
+ */
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "message",      // New chat message
+  "booking",      // Booking updates (new, accepted, rejected, etc.)
+  "referral",     // Referral-related (new referral, commission earned)
+  "service",      // Service updates (approved, featured, etc.)
+  "payment",      // Payment-related (received, payout, etc.)
+  "system",       // System notifications (maintenance, updates)
+  "review",       // New review received
+  "promotion",    // Promotional notifications
+]);
+
+/**
+ * Notifications Table
+ * Stores all user notifications with AI prioritization support
+ */
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Notification content
+  type: notificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  icon: varchar("icon", { length: 50 }), // Icon name for UI (e.g., "message", "bell", "dollar")
+  
+  // Related entities (for navigation)
+  relatedEntityType: varchar("related_entity_type", { length: 50 }), // 'booking', 'conversation', 'service', 'order'
+  relatedEntityId: varchar("related_entity_id"),
+  actionUrl: varchar("action_url", { length: 500 }), // Where to navigate on click
+  
+  // AI Prioritization
+  priority: integer("priority").default(5).notNull(), // 1 (highest) to 10 (lowest)
+  aiRelevanceScore: decimal("ai_relevance_score", { precision: 4, scale: 3 }), // 0.000 to 1.000
+  aiReasoning: text("ai_reasoning"), // Why AI assigned this priority
+  
+  // Status tracking
+  isRead: boolean("is_read").default(false).notNull(),
+  readAt: timestamp("read_at"),
+  isDismissed: boolean("is_dismissed").default(false).notNull(),
+  
+  // Delivery tracking
+  deliveredVia: jsonb("delivered_via").default([]).notNull(), // ['in_app', 'email', 'push']
+  emailSentAt: timestamp("email_sent_at"),
+  pushSentAt: timestamp("push_sent_at"),
+  
+  // Metadata
+  metadata: jsonb("metadata").default({}), // Additional data specific to notification type
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Optional expiration
+}, (table) => [
+  index("idx_notifications_user").on(table.userId),
+  index("idx_notifications_user_unread").on(table.userId, table.isRead),
+  index("idx_notifications_type").on(table.type),
+  index("idx_notifications_created").on(table.createdAt),
+  index("idx_notifications_priority").on(table.userId, table.priority),
+]);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+/**
+ * Notification Preferences Table
+ * User-specific notification settings
+ */
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  
+  // Global toggle
+  notificationsEnabled: boolean("notifications_enabled").default(true).notNull(),
+  
+  // Delivery method toggles
+  inAppEnabled: boolean("in_app_enabled").default(true).notNull(),
+  emailEnabled: boolean("email_enabled").default(true).notNull(),
+  pushEnabled: boolean("push_enabled").default(false).notNull(),
+  
+  // Per-type settings (stored as JSON for flexibility)
+  // Each type has { in_app: boolean, email: boolean, push: boolean }
+  typeSettings: jsonb("type_settings").default({
+    message: { in_app: true, email: true, push: true },
+    booking: { in_app: true, email: true, push: true },
+    referral: { in_app: true, email: false, push: false },
+    service: { in_app: true, email: false, push: false },
+    payment: { in_app: true, email: true, push: true },
+    system: { in_app: true, email: false, push: false },
+    review: { in_app: true, email: true, push: false },
+    promotion: { in_app: true, email: false, push: false },
+  }).notNull(),
+  
+  // Quiet hours (do not disturb)
+  quietHoursEnabled: boolean("quiet_hours_enabled").default(false).notNull(),
+  quietHoursStart: varchar("quiet_hours_start", { length: 5 }), // "22:00" format
+  quietHoursEnd: varchar("quiet_hours_end", { length: 5 }),     // "08:00" format
+  quietHoursTimezone: varchar("quiet_hours_timezone", { length: 50 }).default("UTC"),
+  
+  // Additional preferences
+  soundEnabled: boolean("sound_enabled").default(true).notNull(),
+  vibrationEnabled: boolean("vibration_enabled").default(true).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+/**
+ * Push Subscriptions Table
+ * Stores Web Push API subscription data for each user device
+ */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Web Push subscription data (from PushSubscription object)
+  endpoint: text("endpoint").notNull(),
+  p256dhKey: text("p256dh_key").notNull(), // Public key for encryption
+  authKey: text("auth_key").notNull(),     // Auth secret
+  
+  // Device info
+  userAgent: varchar("user_agent", { length: 500 }),
+  deviceName: varchar("device_name", { length: 100 }),
+  deviceType: varchar("device_type", { length: 20 }), // 'desktop', 'mobile', 'tablet'
+  
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+  failedAttempts: integer("failed_attempts").default(0).notNull(),
+  lastFailureReason: text("last_failure_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+}, (table) => [
+  index("idx_push_subscriptions_user").on(table.userId),
+  index("idx_push_subscriptions_active").on(table.userId, table.isActive),
+  index("idx_push_subscriptions_endpoint").on(table.endpoint),
+]);
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [pushSubscriptions.userId],
+    references: [users.id],
+  }),
+}));
+
+// ===========================================
 // INSERT SCHEMAS
 // ===========================================
 
@@ -1497,6 +1659,41 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Notification preferences update schema (for API validation)
+export const updateNotificationPreferencesSchema = z.object({
+  notificationsEnabled: z.boolean().optional(),
+  inAppEnabled: z.boolean().optional(),
+  emailEnabled: z.boolean().optional(),
+  pushEnabled: z.boolean().optional(),
+  typeSettings: z.record(z.object({
+    in_app: z.boolean(),
+    email: z.boolean(),
+    push: z.boolean(),
+  })).optional(),
+  quietHoursEnabled: z.boolean().optional(),
+  quietHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  quietHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  quietHoursTimezone: z.string().optional(),
+  soundEnabled: z.boolean().optional(),
+  vibrationEnabled: z.boolean().optional(),
+});
+
 // ===========================================
 // TYPE EXPORTS
 // ===========================================
@@ -1521,3 +1718,26 @@ export type InsertChatConversation = typeof chatConversations.$inferInsert;
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreferences = typeof notificationPreferences.$inferInsert;
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// Notification type constants for use throughout the app
+export const NOTIFICATION_TYPES = [
+  "message",
+  "booking", 
+  "referral",
+  "service",
+  "payment",
+  "system",
+  "review",
+  "promotion",
+] as const;
+
+export type NotificationType = typeof NOTIFICATION_TYPES[number];
