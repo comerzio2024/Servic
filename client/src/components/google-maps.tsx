@@ -37,6 +37,8 @@ export function GoogleMaps({
   const activeDirectionsServiceIdRef = useRef<string | null>(null);
   const isInitializedRef = useRef(false);
   const hasFitBoundsRef = useRef(false);
+  // Store the coordinates used for each service marker to ensure directions use the same coordinates
+  const serviceCoordinatesRef = useRef<Record<string, { lat: number; lng: number }>>({});
 
   // Memoize filtered services to prevent unnecessary recalculations
   const closestServices = useMemo(() => 
@@ -97,66 +99,78 @@ export function GoogleMaps({
     const google = (window as GoogleMapsWindow).google;
     if (!google || !mapRef.current || !userLocation) return;
 
-    // Parse coordinates - use service.locationLat/lng if they exist and are valid
+    // FIRST: Check if we have stored coordinates from the marker (this ensures we use the SAME coordinates as the marker)
     let serviceLat: number | null = null;
     let serviceLng: number | null = null;
     
-    if (service.locationLat) {
-      const parsed = parseFloat(service.locationLat as any);
-      if (!isNaN(parsed)) {
-        serviceLat = parsed;
-      }
-    }
-    
-    if (service.locationLng) {
-      const parsed = parseFloat(service.locationLng as any);
-      if (!isNaN(parsed)) {
-        serviceLng = parsed;
-      }
-    }
-    
-    // If service doesn't have coordinates, try to geocode from locations array
-    if ((!serviceLat || !serviceLng) && service.locations && service.locations.length > 0) {
-      console.log('=== GEOCODING SERVICE LOCATION ===', {
+    const storedCoords = serviceCoordinatesRef.current[service.id];
+    if (storedCoords) {
+      serviceLat = storedCoords.lat;
+      serviceLng = storedCoords.lng;
+      console.log('=== USING STORED COORDINATES FROM MARKER ===', {
         serviceId: service.id,
         serviceTitle: service.title,
-        locationAddress: service.locations[0],
-        allLocations: service.locations,
+        storedCoords: { lat: serviceLat, lng: serviceLng },
       });
-      try {
-        const geocoded = await geocodeLocation(service.locations[0]);
-        serviceLat = geocoded.lat;
-        serviceLng = geocoded.lng;
-        console.log('=== GEOCODING RESULT ===', {
-          serviceId: service.id,
-          originalAddress: service.locations[0],
-          geocodedCoords: { lat: serviceLat, lng: serviceLng },
-          displayName: geocoded.displayName,
-        });
-      } catch (error) {
-        console.error('Failed to geocode service location:', error);
-        // Don't return here, fall through to owner location
-      }
-    }
-    
-    // Fallback to owner's location if service doesn't have its own and geocoding failed
-    if (!serviceLat || !serviceLng) {
-      if (service.owner?.locationLat) {
-        const parsed = parseFloat(service.owner.locationLat as any);
+    } else {
+      // Fallback: Parse coordinates - use service.locationLat/lng if they exist and are valid
+      if (service.locationLat) {
+        const parsed = parseFloat(service.locationLat as any);
         if (!isNaN(parsed)) {
           serviceLat = parsed;
         }
       }
-      if (service.owner?.locationLng) {
-        const parsed = parseFloat(service.owner.locationLng as any);
+      
+      if (service.locationLng) {
+        const parsed = parseFloat(service.locationLng as any);
         if (!isNaN(parsed)) {
           serviceLng = parsed;
+        }
+      }
+      
+      // If service doesn't have coordinates, try to geocode from locations array
+      if ((!serviceLat || !serviceLng) && service.locations && service.locations.length > 0) {
+        console.log('=== GEOCODING SERVICE LOCATION (FALLBACK) ===', {
+          serviceId: service.id,
+          serviceTitle: service.title,
+          locationAddress: service.locations[0],
+          allLocations: service.locations,
+        });
+        try {
+          const geocoded = await geocodeLocation(service.locations[0]);
+          serviceLat = geocoded.lat;
+          serviceLng = geocoded.lng;
+          console.log('=== GEOCODING RESULT ===', {
+            serviceId: service.id,
+            originalAddress: service.locations[0],
+            geocodedCoords: { lat: serviceLat, lng: serviceLng },
+            displayName: geocoded.displayName,
+          });
+        } catch (error) {
+          console.error('Failed to geocode service location:', error);
+        }
+      }
+      
+      // Fallback to owner's location if service doesn't have its own and geocoding failed
+      if (!serviceLat || !serviceLng) {
+        if (service.owner?.locationLat) {
+          const parsed = parseFloat(service.owner.locationLat as any);
+          if (!isNaN(parsed)) {
+            serviceLat = parsed;
+          }
+        }
+        if (service.owner?.locationLng) {
+          const parsed = parseFloat(service.owner.locationLng as any);
+          if (!isNaN(parsed)) {
+            serviceLng = parsed;
+          }
         }
       }
     }
 
     if (!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) {
       console.error('Service missing location:', service.id, service.title, {
+        storedCoords: storedCoords,
         serviceLocation: { lat: service.locationLat, lng: service.locationLng },
         ownerLocation: { lat: service.owner?.locationLat, lng: service.owner?.locationLng },
         locationsArray: service.locations,
@@ -291,7 +305,7 @@ export function GoogleMaps({
   }, [userLocation]);
 
   // Update markers when services change
-  const updateMarkers = useCallback((shouldFitBounds = false) => {
+  const updateMarkers = useCallback(async (shouldFitBounds = false) => {
     const google = (window as GoogleMapsWindow).google;
     if (!google || !mapRef.current || !userLocation) return;
 
@@ -353,20 +367,51 @@ export function GoogleMaps({
       ownerLocation: { lat: s.owner?.locationLat, lng: s.owner?.locationLng },
     })));
 
-    closestServices.forEach((service, index) => {
+    // Geocode service locations in parallel if needed
+    const geocodePromises = closestServices.map(async (service) => {
       // Use service's own location first, fallback to owner's location
-      const serviceLat = service.locationLat ? parseFloat(service.locationLat as any) : (service.owner?.locationLat ? parseFloat(service.owner.locationLat as any) : null);
-      const serviceLng = service.locationLng ? parseFloat(service.locationLng as any) : (service.owner?.locationLng ? parseFloat(service.owner.locationLng as any) : null);
+      let serviceLat = service.locationLat ? parseFloat(service.locationLat as any) : null;
+      let serviceLng = service.locationLng ? parseFloat(service.locationLng as any) : null;
       
-      if (!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) return;
+      // If service doesn't have coordinates, try to geocode from locations array
+      if ((!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) && service.locations && service.locations.length > 0) {
+        try {
+          const geocoded = await geocodeLocation(service.locations[0]);
+          serviceLat = geocoded.lat;
+          serviceLng = geocoded.lng;
+          console.log(`[Geocoded] Service: ${service.id} (${service.title})`, {
+            address: service.locations[0],
+            coordinates: { lat: serviceLat, lng: serviceLng },
+          });
+        } catch (error) {
+          console.warn(`Failed to geocode service ${service.id}:`, error);
+        }
+      }
+      
+      // Fallback to owner's location
+      if (!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) {
+        serviceLat = service.owner?.locationLat ? parseFloat(service.owner.locationLat as any) : null;
+        serviceLng = service.owner?.locationLng ? parseFloat(service.owner.locationLng as any) : null;
+      }
+      
+      if (serviceLat && serviceLng && !isNaN(serviceLat) && !isNaN(serviceLng)) {
+        // Store the coordinates used for this service
+        serviceCoordinatesRef.current[service.id] = { lat: serviceLat, lng: serviceLng };
+        return { service, serviceLat, serviceLng };
+      }
+      return null;
+    });
+    
+    const geocodedServices = (await Promise.all(geocodePromises)).filter((s): s is NonNullable<typeof s> => s !== null);
 
+    geocodedServices.forEach(({ service, serviceLat, serviceLng }, index) => {
       // Log coordinates for debugging
       console.log(`[Marker ${index + 1}] Service: ${service.id} (${service.title})`, {
         serviceLocation: { lat: service.locationLat, lng: service.locationLng },
         ownerLocation: { lat: service.owner?.locationLat, lng: service.owner?.locationLng },
         ownerId: service.owner?.id,
         usingCoords: { lat: serviceLat, lng: serviceLng },
-        source: service.locationLat ? 'service' : 'owner',
+        source: service.locationLat ? 'service' : (service.locations?.[0] ? 'geocoded' : 'owner'),
       });
 
       let adjustedLat = serviceLat;
@@ -428,9 +473,10 @@ export function GoogleMaps({
         ? `<img src="${serviceImage}" alt="${service.title}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />`
         : '';
 
-      // Build Google Maps directions URL using actual service coordinates (not adjusted for marker offset)
-      // Use actual coordinates for precise point-to-point routing
-      const googleMapsDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${serviceLat},${serviceLng}`;
+      // Build Google Maps directions URL using stored coordinates (same as marker)
+      // This ensures the external link uses the exact same coordinates as the marker and embedded directions
+      const storedCoordsForUrl = serviceCoordinatesRef.current[service.id] || { lat: serviceLat, lng: serviceLng };
+      const googleMapsDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${storedCoordsForUrl.lat},${storedCoordsForUrl.lng}`;
 
       // Create unique IDs for buttons to handle clicks
       const infoWindowId = `info-window-${service.id}`;
@@ -581,17 +627,22 @@ export function GoogleMaps({
           }, 100);
         };
         
-        // Call the setup function with the specific coordinates for THIS service
+        // Use the stored coordinates from serviceCoordinatesRef (which were used for the marker)
+        // This ensures directions use the EXACT same coordinates as the marker
+        const storedCoords = serviceCoordinatesRef.current[service.id];
+        const coordsToUse = storedCoords || { lat: serviceLat, lng: serviceLng };
+        
         // Log what we're passing to verify each service has different coordinates
         console.log(`[Setup Button] Service: ${service.id} (${service.title})`, {
-          serviceLat,
-          serviceLng,
+          storedCoords: storedCoords,
+          fallbackCoords: { lat: serviceLat, lng: serviceLng },
+          usingCoords: coordsToUse,
           serviceHasOwnLocation: !!(service.locationLat && service.locationLng),
           serviceLocation: { lat: service.locationLat, lng: service.locationLng },
           ownerLocation: { lat: service.owner?.locationLat, lng: service.owner?.locationLng },
           ownerId: service.owner?.id,
         });
-        setupDirectionsButton(service.id, service.title, serviceLat, serviceLng, service);
+        setupDirectionsButton(service.id, service.title, coordsToUse.lat, coordsToUse.lng, service);
       });
 
       markersRef.current.push(serviceMarker);
