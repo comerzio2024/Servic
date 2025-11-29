@@ -40,7 +40,10 @@ export function GoogleMaps({
   // Memoize filtered services to prevent unnecessary recalculations
   const closestServices = useMemo(() => 
     services
-      .filter(s => s.owner?.locationLat && s.owner?.locationLng)
+      .filter(s => {
+        // Service has its own location OR owner has location
+        return (s.locationLat && s.locationLng) || (s.owner?.locationLat && s.owner?.locationLng);
+      })
       .sort((a, b) => (a.distance || 0) - (b.distance || 0))
       .slice(0, maxServices),
     [services, maxServices]
@@ -70,7 +73,7 @@ export function GoogleMaps({
 
   // Clear directions
   const clearDirections = useCallback(() => {
-    if (directionsRendererRef.current && mapRef.current) {
+    if (directionsRendererRef.current) {
       // Remove the renderer from the map to fully clear it
       directionsRendererRef.current.setMap(null);
       directionsRendererRef.current = null;
@@ -93,39 +96,67 @@ export function GoogleMaps({
     const google = (window as GoogleMapsWindow).google;
     if (!google || !mapRef.current || !userLocation) return;
 
-    if (!service.owner?.locationLat || !service.owner?.locationLng) return;
+    // Use service's own location first, fallback to owner's location
+    const serviceLat = service.locationLat ? parseFloat(service.locationLat as any) : (service.owner?.locationLat ? parseFloat(service.owner.locationLat as any) : null);
+    const serviceLng = service.locationLng ? parseFloat(service.locationLng as any) : (service.owner?.locationLng ? parseFloat(service.owner.locationLng as any) : null);
 
-    // Clear previous directions by removing the renderer
-    clearDirections();
+    if (!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) {
+      console.error('Service missing location:', service.id, service.title, {
+        serviceLocation: { lat: service.locationLat, lng: service.locationLng },
+        ownerLocation: { lat: service.owner?.locationLat, lng: service.owner?.locationLng }
+      });
+      return;
+    }
+
+    // Clear previous directions by removing the renderer completely
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current = null;
+    }
+    activeDirectionsServiceIdRef.current = null;
 
     // Initialize directions service if needed
     if (!directionsServiceRef.current) {
       directionsServiceRef.current = new google.maps.DirectionsService();
     }
 
-    // Create a new directions renderer for this route
-    directionsRendererRef.current = new google.maps.DirectionsRenderer({
-      map: mapRef.current,
-      suppressMarkers: true, // We'll use our custom markers
-      polylineOptions: {
-        strokeColor: '#3b82f6',
-        strokeOpacity: 0.7,
-        strokeWeight: 4,
-      },
-    });
+    // Create LatLng objects for precise point-to-point routing
+    const originLatLng = new google.maps.LatLng(userLocation.lat, userLocation.lng);
+    const destinationLatLng = new google.maps.LatLng(serviceLat, serviceLng);
 
-    const serviceLat = parseFloat(service.owner.locationLat as any);
-    const serviceLng = parseFloat(service.owner.locationLng as any);
-
-    const request = {
+    console.log('Requesting directions:', {
+      serviceId: service.id,
+      serviceTitle: service.title,
       origin: { lat: userLocation.lat, lng: userLocation.lng },
       destination: { lat: serviceLat, lng: serviceLng },
+      originLatLng: originLatLng.toString(),
+      destinationLatLng: destinationLatLng.toString(),
+    });
+
+    const request = {
+      origin: originLatLng,
+      destination: destinationLatLng,
       travelMode: google.maps.TravelMode.DRIVING,
+      provideRouteAlternatives: false,
     };
 
-    // Request the route
+    // Request the route first, then create renderer after we get the result
     directionsServiceRef.current.route(request, (result: any, status: any) => {
-      if (status === google.maps.DirectionsStatus.OK && directionsRendererRef.current) {
+      if (status === google.maps.DirectionsStatus.OK) {
+        console.log('Directions received for service:', service.id, service.title);
+        
+        // Create a fresh directions renderer for this route
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+          map: mapRef.current,
+          suppressMarkers: true, // We'll use our custom markers
+          polylineOptions: {
+            strokeColor: '#3b82f6',
+            strokeOpacity: 0.7,
+            strokeWeight: 4,
+          },
+        });
+
+        // Set the directions on the new renderer
         directionsRendererRef.current.setDirections(result);
         activeDirectionsServiceIdRef.current = service.id;
         
@@ -137,15 +168,11 @@ export function GoogleMaps({
         });
         mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
       } else {
-        console.error('Directions request failed:', status);
+        console.error('Directions request failed:', status, 'for service:', service.id, service.title);
         activeDirectionsServiceIdRef.current = null;
-        if (directionsRendererRef.current) {
-          directionsRendererRef.current.setMap(null);
-          directionsRendererRef.current = null;
-        }
       }
     });
-  }, [userLocation, clearDirections]);
+  }, [userLocation]);
 
   // Update markers when services change
   const updateMarkers = useCallback((shouldFitBounds = false) => {
@@ -201,13 +228,17 @@ export function GoogleMaps({
     const positionCounts: Record<string, number> = {};
 
     closestServices.forEach((service, index) => {
-      if (!service.owner?.locationLat || !service.owner?.locationLng) return;
+      // Use service's own location first, fallback to owner's location
+      const serviceLat = service.locationLat ? parseFloat(service.locationLat as any) : (service.owner?.locationLat ? parseFloat(service.owner.locationLat as any) : null);
+      const serviceLng = service.locationLng ? parseFloat(service.locationLng as any) : (service.owner?.locationLng ? parseFloat(service.owner.locationLng as any) : null);
+      
+      if (!serviceLat || !serviceLng || isNaN(serviceLat) || isNaN(serviceLng)) return;
 
-      let serviceLat = parseFloat(service.owner.locationLat as any);
-      let serviceLng = parseFloat(service.owner.locationLng as any);
+      let adjustedLat = serviceLat;
+      let adjustedLng = serviceLng;
 
       // Create a key for this position to detect duplicates
-      const posKey = `${serviceLat.toFixed(4)},${serviceLng.toFixed(4)}`;
+      const posKey = `${adjustedLat.toFixed(4)},${adjustedLng.toFixed(4)}`;
       const count = positionCounts[posKey] || 0;
       positionCounts[posKey] = count + 1;
 
@@ -215,13 +246,13 @@ export function GoogleMaps({
       if (count > 0) {
         const angle = (count * 60) * (Math.PI / 180); // 60 degrees apart
         const offsetDistance = 0.002; // ~200m offset
-        serviceLat += offsetDistance * Math.cos(angle);
-        serviceLng += offsetDistance * Math.sin(angle);
+        adjustedLat += offsetDistance * Math.cos(angle);
+        adjustedLng += offsetDistance * Math.sin(angle);
       }
 
       const serviceMarker = new google.maps.Marker({
         map: mapRef.current,
-        position: { lat: serviceLat, lng: serviceLng },
+        position: { lat: adjustedLat, lng: adjustedLng },
         title: service.title,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
@@ -268,6 +299,7 @@ export function GoogleMaps({
       const destinationAddress = service.locations && service.locations.length > 0
         ? encodeURIComponent(service.locations[0])
         : encodeURIComponent(service.title);
+      // Also include coordinates as fallback for better accuracy
       const googleMapsDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${originAddress}&destination=${destinationAddress}`;
 
       // Create unique IDs for buttons to handle clicks
@@ -361,9 +393,14 @@ export function GoogleMaps({
         currentInfoWindowRef.current = serviceInfoWindow;
         
         // Set up event listener for directions button after info window opens
+        // Use a closure to capture the correct service
         setTimeout(() => {
           const getDirectionsBtn = document.getElementById(`get-directions-${service.id}`);
           if (getDirectionsBtn) {
+            // Store the service ID in a data attribute to ensure we use the correct service
+            const currentServiceId = service.id;
+            const currentService = service; // Capture service in closure
+            
             // Remove any existing listeners to avoid duplicates
             const newBtn = getDirectionsBtn.cloneNode(true);
             getDirectionsBtn.parentNode?.replaceChild(newBtn, getDirectionsBtn);
@@ -371,7 +408,13 @@ export function GoogleMaps({
             newBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
-              showDirections(service);
+              
+              // Find the service from the services array to ensure we have the latest data
+              const serviceToUse = closestServices.find(s => s.id === currentServiceId) || currentService;
+              
+              console.log('Get Directions clicked for service:', serviceToUse.id, serviceToUse.title);
+              showDirections(serviceToUse);
+              
               // Close the info window after showing directions
               serviceInfoWindow.close();
               currentInfoWindowRef.current = null;
@@ -381,7 +424,7 @@ export function GoogleMaps({
       });
 
       markersRef.current.push(serviceMarker);
-      bounds.extend({ lat: serviceLat, lng: serviceLng });
+      bounds.extend({ lat: adjustedLat, lng: adjustedLng });
     });
 
     // Only fit bounds on initial load or when explicitly requested
@@ -389,7 +432,7 @@ export function GoogleMaps({
       mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
       hasFitBoundsRef.current = true;
     }
-  }, [userLocation, closestServices, initializeDirections, clearDirections, showDirections, closeAllInfoWindows]);
+  }, [userLocation, closestServices, initializeDirections, clearDirections, closeAllInfoWindows]);
 
   // Initialize map only once when it becomes visible
   useEffect(() => {
