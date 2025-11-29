@@ -332,10 +332,17 @@ export function GoogleMaps({
         setTimeout(() => {
           const getDirectionsBtn = document.getElementById(`get-directions-${service.id}`);
           if (getDirectionsBtn) {
-            getDirectionsBtn.addEventListener('click', (e) => {
+            // Remove any existing listeners to avoid duplicates
+            const newBtn = getDirectionsBtn.cloneNode(true);
+            getDirectionsBtn.parentNode?.replaceChild(newBtn, getDirectionsBtn);
+            
+            newBtn.addEventListener('click', (e) => {
               e.preventDefault();
               e.stopPropagation();
               showDirections(service);
+              // Close the info window after showing directions
+              serviceInfoWindow.close();
+              currentInfoWindowRef.current = null;
             });
           }
         }, 100);
