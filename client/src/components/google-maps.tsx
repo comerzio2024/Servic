@@ -71,7 +71,12 @@ export function GoogleMaps({
   // Clear directions
   const clearDirections = useCallback(() => {
     if (directionsRendererRef.current) {
+      // Clear the directions by setting an empty result
       directionsRendererRef.current.setDirections({ routes: [] });
+      // Also set the map to null temporarily to force a reset
+      const map = directionsRendererRef.current.getMap();
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current.setMap(map);
       activeDirectionsServiceIdRef.current = null;
     }
   }, []);
@@ -92,6 +97,9 @@ export function GoogleMaps({
     if (!google || !directionsServiceRef.current || !directionsRendererRef.current || !userLocation) return;
 
     if (!service.owner?.locationLat || !service.owner?.locationLng) return;
+
+    // Clear previous directions first
+    clearDirections();
 
     const serviceLat = parseFloat(service.owner.locationLat as any);
     const serviceLng = parseFloat(service.owner.locationLng as any);
@@ -116,9 +124,10 @@ export function GoogleMaps({
         mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
       } else {
         console.error('Directions request failed:', status);
+        activeDirectionsServiceIdRef.current = null;
       }
     });
-  }, [userLocation]);
+  }, [userLocation, clearDirections]);
 
   // Update markers when services change
   const updateMarkers = useCallback((shouldFitBounds = false) => {
