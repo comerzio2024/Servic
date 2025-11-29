@@ -293,8 +293,21 @@ const DEFAULT_PLANS = [
 /**
  * Reset the database by clearing all data tables
  * WARNING: This will delete all data! Use with caution.
+ * @param confirmReset - Must be true to actually perform the reset (safety check)
+ * @throws Error if confirmReset is not true or if in production without explicit confirmation
  */
-export async function resetDatabase() {
+export async function resetDatabase(confirmReset: boolean = false) {
+  // Safety check: prevent accidental data loss
+  if (!confirmReset) {
+    throw new Error("resetDatabase requires confirmReset=true parameter to prevent accidental data loss");
+  }
+  
+  // Additional safety: warn if running in production
+  if (process.env.NODE_ENV === "production") {
+    console.warn("⚠️  WARNING: Resetting database in PRODUCTION environment!");
+    console.warn("⚠️  This will permanently delete all data!");
+  }
+  
   try {
     console.log("Resetting database...");
     
@@ -1305,13 +1318,18 @@ export async function seedDatabase() {
       "demo-user-10": { lat: 46.8065, lng: 7.1620 },  // Fribourg
     };
 
+    // Coordinate variation constants for service locations
+    // Each unit of 0.001 degrees is approximately 111 meters at Swiss latitudes
+    const COORD_VARIATION_STEP = 0.001; // ~111m per step
+    const COORD_VARIATION_MAX = 0.01;   // Maximum ~1.1km variation from base
+
     // Auto-generate hashtags and coordinates from tags for services that don't have them
     let serviceCounter = 0;
     const servicesWithHashtags = SAMPLE_SERVICES.map(service => {
       serviceCounter++;
       const baseCoords = ownerCoordinates[service.ownerId] || { lat: 47.3769, lng: 8.5417 };
-      // Add slight variation to coordinates (within ~500m) for each service
-      const variation = (serviceCounter * 0.001) % 0.01;
+      // Add slight variation to coordinates to spread services within city area
+      const variation = (serviceCounter * COORD_VARIATION_STEP) % COORD_VARIATION_MAX;
       
       return {
         ...service,
@@ -1835,8 +1853,11 @@ async function seedDemoNotifications() {
       return;
     }
 
-    // Get demo users
-    const demoUsers = await db.select().from(users).where(eq(users.isAdmin, false)).limit(8);
+    // Get demo users (filtering by ID pattern rather than isAdmin flag for reliability)
+    // This ensures we get the demo users even if isAdmin defaults weren't applied
+    const allUsers = await db.select().from(users).limit(20);
+    const demoUsers = allUsers.filter(u => u.id.startsWith("demo-user-"));
+    
     if (demoUsers.length === 0) {
       console.log("No demo users found for notifications, skipping...");
       return;
