@@ -70,13 +70,9 @@ export function GoogleMaps({
 
   // Clear directions
   const clearDirections = useCallback(() => {
-    if (directionsRendererRef.current) {
+    if (directionsRendererRef.current && mapRef.current) {
       // Clear the directions by setting an empty result
       directionsRendererRef.current.setDirections({ routes: [] });
-      // Also set the map to null temporarily to force a reset
-      const map = directionsRendererRef.current.getMap();
-      directionsRendererRef.current.setMap(null);
-      directionsRendererRef.current.setMap(map);
       activeDirectionsServiceIdRef.current = null;
     }
   }, []);
@@ -94,9 +90,14 @@ export function GoogleMaps({
   // Show directions for a specific service
   const showDirections = useCallback((service: ServiceWithDetails & { distance?: number }) => {
     const google = (window as GoogleMapsWindow).google;
-    if (!google || !directionsServiceRef.current || !directionsRendererRef.current || !userLocation) return;
+    if (!google || !directionsServiceRef.current || !mapRef.current || !userLocation) return;
 
     if (!service.owner?.locationLat || !service.owner?.locationLng) return;
+
+    // Ensure directions renderer is initialized
+    if (!directionsRendererRef.current) {
+      initializeDirections();
+    }
 
     // Clear previous directions first
     clearDirections();
@@ -110,24 +111,34 @@ export function GoogleMaps({
       travelMode: google.maps.TravelMode.DRIVING,
     };
 
-    directionsServiceRef.current.route(request, (result: any, status: any) => {
-      if (status === google.maps.DirectionsStatus.OK) {
-        directionsRendererRef.current.setDirections(result);
-        activeDirectionsServiceIdRef.current = service.id;
-        
-        // Fit map to show entire route
-        const bounds = new google.maps.LatLngBounds();
-        result.routes[0].legs[0].steps.forEach((step: any) => {
-          bounds.extend(step.start_location);
-          bounds.extend(step.end_location);
-        });
-        mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
-      } else {
-        console.error('Directions request failed:', status);
-        activeDirectionsServiceIdRef.current = null;
-      }
-    });
-  }, [userLocation, clearDirections]);
+    // Clear directions renderer before requesting new route
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setDirections({ routes: [] });
+    }
+
+    // Use a small delay to ensure the clear is processed before new directions
+    setTimeout(() => {
+      if (!directionsServiceRef.current || !directionsRendererRef.current) return;
+
+      directionsServiceRef.current.route(request, (result: any, status: any) => {
+        if (status === google.maps.DirectionsStatus.OK && directionsRendererRef.current) {
+          directionsRendererRef.current.setDirections(result);
+          activeDirectionsServiceIdRef.current = service.id;
+          
+          // Fit map to show entire route
+          const bounds = new google.maps.LatLngBounds();
+          result.routes[0].legs[0].steps.forEach((step: any) => {
+            bounds.extend(step.start_location);
+            bounds.extend(step.end_location);
+          });
+          mapRef.current?.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+        } else {
+          console.error('Directions request failed:', status);
+          activeDirectionsServiceIdRef.current = null;
+        }
+      });
+    }, 50);
+  }, [userLocation, clearDirections, initializeDirections]);
 
   // Update markers when services change
   const updateMarkers = useCallback((shouldFitBounds = false) => {
